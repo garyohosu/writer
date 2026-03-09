@@ -6,7 +6,8 @@ build-backend = "setuptools.backends.legacy:build"
 name = "writer"
 version = "0.1.0"
 requires-python = ">=3.11"
+dependencies = ["PyYAML>=6.0"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
+[project.scripts]
+writer-run-daily = "writer.scripts.run_daily:main"
+writer-publish-story = "writer.scripts.publish_story:main"

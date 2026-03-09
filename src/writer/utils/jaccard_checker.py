@@ -14,9 +14,14 @@ class JaccardChecker:
 
     def char_ngrams(self, text: str, n: int) -> set[str]:
         """Return the set of all n-character substrings of *text*."""
-        if len(text) < n:
+        normalized = "".join(text.lower().split())
+        if not normalized:
             return set()
-        return {text[i : i + n] for i in range(len(text) - n + 1)}
+        if len(normalized) < n:
+            return {normalized}
+        return {
+            normalized[i : i + n] for i in range(len(normalized) - n + 1)
+        }
 
     def jaccard(self, a: set[str], b: set[str]) -> float:
         """Return |A ∩ B| / |A ∪ B|, or 0.0 when both sets are empty."""
@@ -38,29 +43,40 @@ class JaccardChecker:
             {
                 "max_title_similarity": float,
                 "max_summary_similarity": float,
+                "max_similarity": float,
                 "is_duplicate": bool,
             }
         """
-        title_ngrams = self.char_ngrams(candidate_title, 2)
-        summary_ngrams = self.char_ngrams(candidate_summary, 2)
+        title_ngrams = self.char_ngrams(candidate_title, 3)
+        summary_ngrams = self.char_ngrams(candidate_summary, 3)
+        combined_ngrams = self.char_ngrams(
+            f"{candidate_title}\n{candidate_summary}",
+            3,
+        )
 
         max_title_sim = 0.0
         max_summary_sim = 0.0
+        max_similarity = 0.0
 
         for story in recent_30:
-            t_sim = self.jaccard(title_ngrams, self.char_ngrams(story.title, 2))
-            s_sim = self.jaccard(summary_ngrams, self.char_ngrams(story.summary, 2))
+            t_sim = self.jaccard(title_ngrams, self.char_ngrams(story.title, 3))
+            s_sim = self.jaccard(summary_ngrams, self.char_ngrams(story.summary, 3))
+            combined_sim = self.jaccard(
+                combined_ngrams,
+                self.char_ngrams(f"{story.title}\n{story.summary}", 3),
+            )
             if t_sim > max_title_sim:
                 max_title_sim = t_sim
             if s_sim > max_summary_sim:
                 max_summary_sim = s_sim
+            if combined_sim > max_similarity:
+                max_similarity = combined_sim
 
-        is_duplicate = (
-            max_title_sim >= self.threshold or max_summary_sim >= self.threshold
-        )
+        is_duplicate = max_similarity >= self.threshold
 
         return {
             "max_title_similarity": max_title_sim,
             "max_summary_similarity": max_summary_sim,
+            "max_similarity": max_similarity,
             "is_duplicate": is_duplicate,
         }

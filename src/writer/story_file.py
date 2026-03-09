@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 from dataclasses import asdict
 
 import yaml
@@ -30,7 +29,8 @@ def _parse_markdown(content: str) -> StoryDocument:
 
 
 def _story_filename(slug: str, date: str) -> str:
-    return f"{date}-{slug}.md"
+    basename = slug if slug.startswith(f"{date}-") else f"{date}-{slug}"
+    return f"{basename}.md"
 
 
 class StoryFile:

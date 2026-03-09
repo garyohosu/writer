@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import date, timedelta
 
 
@@ -35,6 +36,11 @@ class UsedThemes:
             entries = self.load()
         except (FileNotFoundError, json.JSONDecodeError):
             entries = []
-        entries.append({"theme": theme, "date": run_date})
-        with open(self.path, "w", encoding="utf-8") as f:
+        record = {"theme": theme, "date": run_date}
+        if record in entries:
+            return
+        entries.append(record)
+        tmp_path = self.path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(entries, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, self.path)

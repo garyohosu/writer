@@ -65,6 +65,15 @@ class TestStoryFileSaveMaster:
         except NotImplementedError:
             pytest.xfail("StoryFile.save_master not yet implemented")
 
+    def test_save_master_does_not_duplicate_date_prefix_in_filename(
+        self, story_file, sample_story_document
+    ) -> None:
+        import os
+
+        sample_story_document.front_matter.slug = "2026-03-09-midnight-cat"
+        path = story_file.save_master(sample_story_document)
+        assert os.path.basename(path) == "2026-03-09-midnight-cat.md"
+
 
 class TestStoryFileLoadMaster:
     """Tests for StoryFile.load_master()."""

@@ -292,12 +292,9 @@ class TestRunDailyPipelineExecuteReviewStage:
         assert sample_review_output_adsense_risk.passed is False
         pipeline.review_agent.review.return_value = sample_review_output_adsense_risk
         pipeline.story_agent.generate.return_value = sample_story_output
-        try:
+        with pytest.raises(RuntimeError, match="Max review attempts reached"):
             pipeline._execute_review_stage()
-            # Should have attempted rewrite since review failed
-            pipeline.story_agent.generate.assert_called()
-        except NotImplementedError:
-            pytest.xfail("RunDailyPipeline._execute_review_stage not yet implemented")
+        assert pipeline.story_agent.generate.call_count == pipeline.config.max_review_attempts
 
 
 class TestRunDailyPipelineExecutePublishStage:
@@ -305,11 +302,13 @@ class TestRunDailyPipelineExecutePublishStage:
 
     def test_execute_publish_stage_uses_publish_service(self, pipeline) -> None:
         pipeline.publish_service.run_from_master.return_value = "abc123"
+        pipeline._current_slug = "test-slug"
         pipeline._execute_publish_stage()
         pipeline.publish_service.run_from_master.assert_called_once()
 
     def test_execute_publish_stage_calls_publish_service(self, pipeline) -> None:
         pipeline.publish_service.run_from_master.return_value = "abc123"
+        pipeline._current_slug = "test-slug"
         try:
             pipeline._execute_publish_stage()
             pipeline.publish_service.run_from_master.assert_called_once()
@@ -318,11 +317,26 @@ class TestRunDailyPipelineExecutePublishStage:
 
     def test_execute_publish_stage_sends_notification(self, pipeline) -> None:
         pipeline.publish_service.run_from_master.return_value = "abc123"
+        pipeline._current_slug = "test-slug"
         try:
             pipeline._execute_publish_stage()
             pipeline.notifier.notify.assert_called_once()
         except NotImplementedError:
             pytest.xfail("RunDailyPipeline._execute_publish_stage not yet implemented")
+
+    def test_run_stops_after_review_in_manual_mode(self, pipeline) -> None:
+        pipeline.config.publication_mode = "manual_review"
+        with (
+            patch.object(pipeline, "_execute_plot_stage") as mock_plot,
+            patch.object(pipeline, "_execute_story_stage") as mock_story,
+            patch.object(pipeline, "_execute_review_stage") as mock_review,
+            patch.object(pipeline, "_execute_publish_stage") as mock_publish,
+        ):
+            pipeline.run()
+            mock_plot.assert_called_once()
+            mock_story.assert_called_once()
+            mock_review.assert_called_once()
+            mock_publish.assert_not_called()
 
 
 class TestPublishStoryScript:

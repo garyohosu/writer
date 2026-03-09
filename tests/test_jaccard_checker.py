@@ -32,8 +32,8 @@ class TestCharNgrams:
         result = checker.char_ngrams("abcd", 3)
         assert result == {"abc", "bcd"}
 
-    def test_text_shorter_than_n_returns_empty_set(self, checker) -> None:
-        assert checker.char_ngrams("ab", 3) == set()
+    def test_text_shorter_than_n_returns_single_token(self, checker) -> None:
+        assert checker.char_ngrams("ab", 3) == {"ab"}
         assert checker.char_ngrams("", 2) == set()
 
     def test_exact_length_returns_one_element(self, checker) -> None:
@@ -121,6 +121,7 @@ class TestCompare:
         result = checker.compare("タイトル", "あらすじ", [])
         assert "max_title_similarity" in result
         assert "max_summary_similarity" in result
+        assert "max_similarity" in result
         assert "is_duplicate" in result
 
     def test_identical_title_detected_as_duplicate(self, checker_low_threshold) -> None:
@@ -154,10 +155,11 @@ class TestCompare:
         # The second story has identical title so max_title_similarity should be 1.0
         assert result["max_title_similarity"] == pytest.approx(1.0)
 
-    def test_is_duplicate_true_when_title_sim_meets_threshold(self) -> None:
+    def test_is_duplicate_true_when_combined_similarity_meets_threshold(self) -> None:
         checker = JaccardChecker(threshold=0.5)
         story = self._make_story("夜明けの約束", "別のあらすじ")
-        result = checker.compare("夜明けの約束", "全然違うあらすじ内容テスト", [story])
+        result = checker.compare("夜明けの約束", "別のあらすじ", [story])
+        assert result["max_similarity"] == pytest.approx(1.0)
         assert result["is_duplicate"] is True
 
     def test_is_duplicate_false_when_below_threshold(self) -> None:

@@ -1,13 +1,14 @@
 """Tests for writer.services.publish_service.PublishService."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 import pytest
 
 from writer.services.publish_service import PublishService
 from writer.story_file import StoryFile
 from writer.data.stories_index import StoriesIndex
+from writer.data.used_themes import UsedThemes
 from writer.utils.git_operations import GitOperations
 from writer.state import StateManager
 
@@ -38,17 +39,24 @@ def mock_state_manager() -> MagicMock:
 
 
 @pytest.fixture
+def mock_used_themes() -> MagicMock:
+    return MagicMock(spec=UsedThemes)
+
+
+@pytest.fixture
 def publish_service(
     mock_story_file,
     mock_stories_index,
     mock_git,
     mock_state_manager,
+    mock_used_themes,
 ) -> PublishService:
     return PublishService(
         story_file=mock_story_file,
         stories_index=mock_stories_index,
         git=mock_git,
         state_manager=mock_state_manager,
+        used_themes=mock_used_themes,
     )
 
 
@@ -61,17 +69,20 @@ class TestPublishServiceInit:
         mock_stories_index,
         mock_git,
         mock_state_manager,
+        mock_used_themes,
     ) -> None:
         svc = PublishService(
             story_file=mock_story_file,
             stories_index=mock_stories_index,
             git=mock_git,
             state_manager=mock_state_manager,
+            used_themes=mock_used_themes,
         )
         assert svc.story_file is mock_story_file
         assert svc.stories_index is mock_stories_index
         assert svc.git is mock_git
         assert svc.state_manager is mock_state_manager
+        assert svc.used_themes is mock_used_themes
 
 
 class TestPublishServiceRunFromMaster:
@@ -165,7 +176,11 @@ class TestPublishServiceRunFromMaster:
         mock_git.add_all.side_effect = lambda: call_order.append("git_add")
         mock_git.commit.side_effect = lambda msg: call_order.append("git_commit") or "abc"
         mock_git.push.side_effect = lambda: call_order.append("git_push") or True
-        mock_state_manager.update.side_effect = lambda *a, **k: call_order.append("mark_published")
+        mock_state_manager.update.side_effect = (
+            lambda stage, result, **kwargs: call_order.append(
+                "mark_published" if result == "published" else "mark_in_progress"
+            )
+        )
 
         try:
             publish_service.run_from_master("test-slug", "2026-03-09")
@@ -188,3 +203,14 @@ class TestPublishServiceRunFromMaster:
             pytest.xfail("PublishService.run_from_master not yet implemented")
         except RuntimeError as exc:
             assert "Push failed" in str(exc)
+
+    def test_run_from_master_updates_used_themes(
+        self,
+        publish_service,
+        mock_story_file,
+        mock_used_themes,
+        sample_story_document,
+    ) -> None:
+        mock_story_file.load_master.return_value = sample_story_document
+        publish_service.run_from_master("yoake-no-yakusoku", "2026-03-09")
+        mock_used_themes.add_published.assert_called_once_with("記憶と喪失", "2026-03-09")

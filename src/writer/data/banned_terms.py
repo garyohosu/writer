@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 
 class BannedTerms:
     """Loads the list of terms that must not appear in generated stories."""
@@ -9,4 +11,5 @@ class BannedTerms:
 
     def load(self) -> list[str]:
         """Load and return all banned terms from disk."""
-        raise NotImplementedError
+        with open(self.path, encoding="utf-8") as f:
+            return json.load(f)
