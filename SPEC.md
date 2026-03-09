@@ -82,7 +82,7 @@ googleアドセンスを各ページに入れておくこと
 ### 3.3 公開前提
 - GitHub Pages 側は既存ブログまたは専用リポジトリで運用する
 - AdSense 審査通過済みサイト、または審査通過を前提とする
-- 広告コード、プライバシーポリシー、問い合わせ導線を配置する
+- 広告コード、プライバシーポリシーを配置する
 
 ---
 
@@ -196,7 +196,6 @@ project-root/
     _includes/
     ads.txt
     privacy-policy.md
-    contact.md
 ```
 
 ### 7.1 保存先の役割分担
@@ -647,7 +646,6 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 - AdSense コードをテンプレートへ埋め込む
 - ads.txt をサイトルートへ配置する
 - プライバシーポリシーを公開する
-- お問い合わせページを設置する
 - AI生成コンテンツである旨を明記する
 
 ### 15.2 ページ配置方針
@@ -688,7 +686,6 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 - index.html または一覧テンプレート
 - 作品ページテンプレート
 - privacy-policy.md
-- contact.md
 - ads.txt
 - sitemap.xml
 - robots.txt
@@ -862,7 +859,7 @@ wsl bash -lc 'cd /path/to/project && .venv/bin/python scripts/run_daily.py >> lo
 - 合格時のみ公開される
 - GitHub Pages に反映される
 - AdSense コードがテンプレートに含まれる
-- ads.txt / privacy-policy / contact が存在する
+- ads.txt / privacy-policy が存在する
 - `stories/` を正本、`site/_posts/` を公開用派生物として運用できる
 - state.json と stories_index.json が更新される
 - ログが残る
