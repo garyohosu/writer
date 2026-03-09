@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 
 
@@ -8,6 +9,9 @@ class WindowsNotifier:
 
     def notify(self, title: str, message: str) -> None:
         """Display a Windows notification with *title* and *message*."""
+        if shutil.which("powershell.exe") is None:
+            # WSL/Linux-only環境では通知をスキップ（本処理は継続）
+            return
         subprocess.run(
             ["powershell.exe", "-NoProfile", "-Command", self.build_cmd(title, message)],
             capture_output=True,
