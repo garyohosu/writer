@@ -32,7 +32,8 @@ class GitOperations:
         return self.get_last_commit_hash()
 
     def push(self) -> bool:
-        """Push to the remote; return True on success."""
+        """Rebase on remote tip, then push to the remote."""
+        self._run("pull", "--rebase", "--autostash")
         self._run("push")
         return True
 
