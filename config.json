@@ -1,0 +1,5 @@
+{
+  "publication_mode": "automatic",
+  "max_review_attempts": 3,
+  "similarity_threshold": 0.55
+}

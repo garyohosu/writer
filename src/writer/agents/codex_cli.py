@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import subprocess
+import tempfile
+from pathlib import Path
 
 
 class CodexCLI:
@@ -9,13 +11,29 @@ class CodexCLI:
     def __init__(self, executable: str) -> None:
         self.executable = executable
 
+    @staticmethod
+    def _clean_output(text: str) -> str:
+        s = (text or "").strip()
+        if s.startswith("```"):
+            lines = s.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            s = "\n".join(lines).strip()
+        return s
+
     def run(self, prompt: str) -> str:
-        """Execute the Codex CLI with *prompt* and return the raw text output."""
-        result = subprocess.run(
-            [self.executable, prompt],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            check=True,
-        )
-        return result.stdout
+        """Execute Codex in non-interactive mode and return last assistant message."""
+        with tempfile.TemporaryDirectory(prefix="writer-codex-") as td:
+            out_path = Path(td) / "last_message.txt"
+            result = subprocess.run(
+                [self.executable, "exec", "--output-last-message", str(out_path), prompt],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
+            if out_path.exists():
+                return self._clean_output(out_path.read_text(encoding="utf-8"))
+            return self._clean_output(result.stdout)
