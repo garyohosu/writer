@@ -12,25 +12,38 @@ classDiagram
         -config: Config
         -state: StateManager
         -logger: LogManager
+        -failure_handler: FailureHandler
         +run()
         +resume_from_stage(stage: str)
         -execute_plot_stage()
         -execute_story_stage()
         -execute_review_stage()
         -execute_publish_stage()
-        -handle_failure(stage: str, error: Exception)
     }
 
     class PublishStoryScript {
         -config: Config
         -state: StateManager
         -logger: LogManager
+        -failure_handler: FailureHandler
+        -publish_service: PublishService
         +run()
-        -sync_posts(slug: str, date: str)
-        -update_index(entry: StoryMetadata)
-        -git_commit_push() str
-        -mark_published(commit_hash: str)
     }
+
+    class PublishService {
+        -story_file: StoryFile
+        -stories_index: StoriesIndex
+        -git: GitOperations
+        -state: StateManager
+        -used_themes: UsedThemes
+        +run_from_master(slug: str, date: str) str
+        -load_publish_target(slug: str, date: str) StoryDocument
+        -sync_posts(doc: StoryDocument)
+        -update_index(doc: StoryDocument)
+        -git_commit_push(slug: str, date: str) str
+        -mark_published(commit_hash: str, theme: str, date: str)
+    }
+    note for PublishService "automatic / manual_review 共通\nsync_posts -> update_index -> git_commit_push -> mark_published"
 
     %% ─────────────────────────────────────────
     %% 設定・状態管理
@@ -57,10 +70,10 @@ classDiagram
         +job_id: str
         +stage: str
         +result: str
-        +slug: str
+        +slug: str | null
         +attempts: dict
         +artifacts: dict
-        +published_commit: str
+        +published_commit: str | null
     }
 
     %% stage enum: plot | story | review | publish
@@ -89,8 +102,8 @@ classDiagram
     class StoryAgent {
         -prompt_path: str
         -codex: CodexCLI
-        +generate(plot: PlotOutput, selected_title: str, rewrite_instruction: str) StoryOutput
-        -build_prompt(plot: PlotOutput, selected_title: str, rewrite_instruction: str) str
+        +generate(plot: PlotOutput, selected_title: str, rewrite_instruction: str | null) StoryOutput
+        -build_prompt(plot: PlotOutput, selected_title: str, rewrite_instruction: str | null) str
         -validate(raw: str) StoryOutput
     }
 
@@ -98,7 +111,7 @@ classDiagram
         -prompt_path: str
         -codex: CodexCLI
         -jaccard: JaccardChecker
-        +review(story: StoryOutput, banned_terms: list, recent_30: list) ReviewOutput
+        +review(story: StoryOutput, banned_terms: list, recent_30: list, jaccard_result: dict) ReviewOutput
         -build_prompt(story: StoryOutput, jaccard_result: dict, banned_terms: list, recent_30: list) str
         -validate(raw: str) ReviewOutput
     }
@@ -142,7 +155,29 @@ classDiagram
         +scores: dict~str,int~
         +issues: list~str~
         +adsense_risk: bool
-        +rewrite_instruction: str
+        +rewrite_instruction: str | null
+    }
+
+    class StoryFrontMatter {
+        +title: str
+        +date: str
+        +slug: str
+        +tags: list~str~
+        +genre: str
+        +theme: str
+        +character_count: int
+        +reading_time_min: int
+        +status: str
+        +summary: str
+        +ai_generated: bool
+        +review_score: int
+    }
+
+    class StoryDocument {
+        +front_matter: StoryFrontMatter
+        +body: str
+        +from_outputs(plot: PlotOutput, story: StoryOutput, review: ReviewOutput, slug: str, date: str)$ StoryDocument
+        +to_index_entry() StoryMetadata
     }
 
     %% ─────────────────────────────────────────
@@ -171,8 +206,9 @@ classDiagram
         -path: str
         +load() list~dict~
         +get_recent_90days() list~str~
-        +add(theme: str, date: str)
+        +add_published(theme: str, date: str)
     }
+    note for UsedThemes "未公開作品では更新しない\npublished 後のみ追加"
 
     class BannedTerms {
         -path: str
@@ -180,18 +216,20 @@ classDiagram
     }
 
     %% ─────────────────────────────────────────
-    %% ファイル操作
+    %% ファイル操作・障害処理
     %% ─────────────────────────────────────────
 
     class StoryFile {
         -stories_dir: str
         -pending_dir: str
         -posts_dir: str
-        +save_master(story: StoryOutput, meta: StoryMetadata, date: str) str
+        +save_master(doc: StoryDocument) str
+        +load_master(slug: str, date: str) StoryDocument
         +verify(path: str) bool
-        +copy_to_pending(slug: str, date: str)
-        +sync_to_posts(slug: str, date: str)
-        -build_front_matter(story: StoryOutput, meta: StoryMetadata) str
+        +copy_to_pending(doc: StoryDocument)
+        +sync_to_posts(doc: StoryDocument)
+        -build_markdown(doc: StoryDocument) str
+        -parse_markdown(path: str) StoryDocument
     }
 
     class LogManager {
@@ -202,6 +240,15 @@ classDiagram
         +save_selected_title_json(title: TitleSelectionOutput)
         +save_generation_txt(story: StoryOutput)
         +save_review_json(review: ReviewOutput, attempt: int)
+        +save_error(stage: str, error: Exception)
+    }
+
+    class FailureHandler {
+        -state: StateManager
+        -logger: LogManager
+        -notifier: WindowsNotifier
+        +handle(stage: str, error: Exception)
+        +mark_failed(stage: str, **kwargs)
     }
 
     %% ─────────────────────────────────────────
@@ -212,7 +259,7 @@ classDiagram
         -threshold: float
         +char_ngrams(text: str, n: int) set~str~
         +jaccard(a: str, b: str) float
-        +is_too_similar(candidate: str, recent_30: list~str~) bool
+        +compare(candidate_title: str, candidate_summary: str, recent_30: list~StoryMetadata~) dict
     }
 
     class GitOperations {
@@ -235,26 +282,38 @@ classDiagram
     RunDailyPipeline --> Config
     RunDailyPipeline --> StateManager
     RunDailyPipeline --> LogManager
+    RunDailyPipeline --> FailureHandler
     RunDailyPipeline --> PlotAgent
     RunDailyPipeline --> TitleSelectionAgent
     RunDailyPipeline --> StoryAgent
     RunDailyPipeline --> ReviewAgent
     RunDailyPipeline --> StoryFile
     RunDailyPipeline --> StoriesIndex
-    RunDailyPipeline --> GitOperations
-    RunDailyPipeline --> WindowsNotifier
+    RunDailyPipeline --> PublishService
     RunDailyPipeline --> UsedThemes
     RunDailyPipeline --> BannedTerms
 
     PublishStoryScript --> Config
     PublishStoryScript --> StateManager
     PublishStoryScript --> LogManager
-    PublishStoryScript --> StoryFile
-    PublishStoryScript --> StoriesIndex
-    PublishStoryScript --> GitOperations
+    PublishStoryScript --> FailureHandler
+    PublishStoryScript --> PublishService
+
+    PublishService --> StoryFile
+    PublishService --> StoriesIndex
+    PublishService --> GitOperations
+    PublishService --> StateManager
+    PublishService --> UsedThemes
+
+    FailureHandler --> StateManager
+    FailureHandler --> LogManager
+    FailureHandler --> WindowsNotifier
 
     StateManager --> StateRecord
     StoriesIndex --> StoryMetadata
+    StoryFile --> StoryDocument
+    StoryDocument *-- StoryFrontMatter
+    StoryDocument --> StoryMetadata
 
     PlotAgent --> PlotOutput
     PlotAgent --> CodexCLI
@@ -269,7 +328,7 @@ classDiagram
 
 ---
 
-## パイプライン処理フロー（クラス間データの流れ）
+## パイプライン処理フロー（automatic モード）
 
 ```mermaid
 classDiagram
@@ -295,9 +354,17 @@ classDiagram
         +review() ReviewOutput
     }
 
+    class StoryDocument {
+        +from_outputs()
+    }
+
     class StoryFile {
         +save_master()
-        +sync_to_posts()
+        +verify()
+    }
+
+    class PublishService {
+        +run_from_master()
     }
 
     class StoriesIndex {
@@ -315,12 +382,64 @@ classDiagram
 
     RunDailyPipeline --> PlotAgent : PlotOutput
     PlotAgent --> TitleSelectionAgent : title_candidates / plot
+    PlotAgent --> StoryAgent : plot
     TitleSelectionAgent --> StoryAgent : selected_title
     StoryAgent --> ReviewAgent : StoryOutput
-    ReviewAgent --> StoryFile : ReviewOutput passed=true
-    StoryFile --> StoriesIndex : StoryMetadata
-    StoriesIndex --> GitOperations : atomic update done
-    GitOperations --> StateManager : commit_hash → published
+    ReviewAgent --> StoryDocument : passed=true
+    StoryDocument --> StoryFile : save_master()
+    StoryFile --> PublishService : verified master
+    PublishService --> StoriesIndex : atomic_update()
+    PublishService --> GitOperations : commit() / push()
+    PublishService --> StateManager : commit_hash -> published
+```
+
+---
+
+## パイプライン処理フロー（manual_review モード）
+
+```mermaid
+classDiagram
+    direction LR
+
+    class RunDailyPipeline {
+        +run()
+    }
+
+    class StoryFile {
+        +save_master()
+        +copy_to_pending()
+        +load_master()
+    }
+
+    class StateManager {
+        +update()
+    }
+
+    class PublishStoryScript {
+        +run()
+    }
+
+    class PublishService {
+        +run_from_master()
+    }
+
+    class StoriesIndex {
+        +atomic_update()
+    }
+
+    class GitOperations {
+        +commit()
+        +push()
+    }
+
+    RunDailyPipeline --> StoryFile : save_master()
+    StoryFile --> StateManager : stage=publish / pending_review
+    StoryFile --> PublishStoryScript : master available
+    PublishStoryScript --> StoryFile : load_master()
+    PublishStoryScript --> PublishService : run_from_master(slug, date)
+    PublishService --> StoriesIndex : atomic_update()
+    PublishService --> GitOperations : commit() / push()
+    PublishService --> StateManager : commit_hash -> published
 ```
 
 ---
@@ -334,12 +453,35 @@ classDiagram
         +job_id: str
         +stage: str
         +result: str
-        +slug: str
+        +slug: str | null
         +attempts: dict
         +artifacts: dict
-        +published_commit: str
+        +published_commit: str | null
     }
-    note for StateRecord "stage: plot|story|review|publish\nresult: in_progress|failed|pending_review|published"
+    note for StateRecord "stage: plot|story|review|publish\nresult: in_progress|failed|pending_review|published\nslug / published_commit は未確定時に null"
+
+    class StoryFrontMatter {
+        +title: str
+        +date: str
+        +slug: str
+        +tags: list~str~
+        +genre: str
+        +theme: str
+        +character_count: int
+        +reading_time_min: int
+        +status: str
+        +summary: str
+        +ai_generated: bool
+        +review_score: int
+    }
+    note for StoryFrontMatter "stories/ 正本・pending/・site/_posts/ で共通利用する front matter"
+
+    class StoryDocument {
+        +front_matter: StoryFrontMatter
+        +body: str
+        +to_index_entry() StoryMetadata
+    }
+    note for StoryDocument "manual publish 時は stories/ 正本 Markdown から復元し\nPublishService に渡す"
 
     class StoryMetadata {
         +date: str
@@ -362,14 +504,17 @@ classDiagram
         +ending_type: str
         +reading_impression: str
     }
-    note for PlotOutput "Plot Agent → Title Selection Agent\n→ Story Agent に渡る"
+    note for PlotOutput "Plot Agent -> Title Selection Agent -> Story Agent に渡る"
 
     class ReviewOutput {
         +passed: bool
         +scores: dict~str,int~
         +issues: list~str~
         +adsense_risk: bool
-        +rewrite_instruction: str
+        +rewrite_instruction: str | null
     }
-    note for ReviewOutput "adsense_risk=true → passed=false 強制\nrewrite_instruction: 再生成指示（最大3回）"
+    note for ReviewOutput "adsense_risk=true -> passed=false 強制\nrewrite_instruction は合格時 null"
+
+    StoryDocument *-- StoryFrontMatter
+    StoryDocument --> StoryMetadata
 ```
