@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://garyohosu.github.io/writer/sitemap.xml

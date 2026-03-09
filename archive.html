@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Archive | Daily Short Story</title>
+    <meta
+      name="description"
+      content="Daily Short Story の公開済み短編一覧。"
+    >
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&family=Noto+Serif+JP:wght@400;500;700&display=swap"
+    >
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/aos@2.3.4/dist/aos.css"
+    >
+    <link rel="stylesheet" href="assets/styles/site.css">
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6743751614716161"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script defer src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.8.1/dist/vanilla-tilt.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script defer src="assets/scripts/site.js"></script>
+  </head>
+  <body data-page="archive">
+    <div class="site-shell page-shell">
+      <div class="ambient ambient-a"></div>
+      <div class="ambient ambient-b"></div>
+
+      <header class="floating-nav glass-panel" data-aos="fade-down">
+        <a class="brand" href="./">
+          <span class="brand-mark">DS</span>
+          <span class="brand-copy">
+            <strong>Daily Short Story</strong>
+            <small>Archive</small>
+          </span>
+        </a>
+        <nav class="nav-links">
+          <a href="./">Home</a>
+          <a href="tags.html">Tags</a>
+          <a href="archive.html">Archive</a>
+          <a href="privacy-policy.html">Policy</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="テーマ切替">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </header>
+
+      <main class="page-main">
+        <section class="page-hero glass-panel" data-aos="fade-up">
+          <span class="eyebrow">Archive</span>
+          <h1>公開済みの物語一覧</h1>
+          <p>
+            日付順に、公開済みの短編を一覧表示します。物語の粒度を揃えたまま、
+            少しずつ棚が増えていく設計です。
+          </p>
+        </section>
+
+        <section id="archive-grid" class="post-grid"></section>
+      </main>
+    </div>
+  </body>
+</html>

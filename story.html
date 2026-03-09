@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Story | Daily Short Story</title>
+    <meta name="description" content="Daily Short Story の短編詳細ページ。">
+    <meta property="og:type" content="article">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&family=Noto+Serif+JP:wght@400;500;700&display=swap"
+    >
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/aos@2.3.4/dist/aos.css"
+    >
+    <link rel="stylesheet" href="assets/styles/site.css">
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6743751614716161"
+      crossorigin="anonymous"
+    ></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script defer src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.8.1/dist/vanilla-tilt.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script defer src="assets/scripts/site.js"></script>
+  </head>
+  <body data-page="story">
+    <div class="progress-shell">
+      <div id="reading-progress" class="reading-progress"></div>
+    </div>
+
+    <div class="site-shell page-shell story-shell">
+      <div class="ambient ambient-a"></div>
+      <div class="ambient ambient-c"></div>
+
+      <header class="floating-nav glass-panel story-nav" data-aos="fade-down">
+        <a class="brand" href="./">
+          <span class="brand-mark">DS</span>
+          <span class="brand-copy">
+            <strong>Daily Short Story</strong>
+            <small>Story</small>
+          </span>
+        </a>
+        <nav class="nav-links">
+          <a href="./">Home</a>
+          <a href="tags.html">Tags</a>
+          <a href="archive.html">Archive</a>
+          <a href="privacy-policy.html">Policy</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="テーマ切替">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </header>
+
+      <main class="story-main">
+        <section class="story-hero glass-panel" data-aos="fade-up">
+          <div class="story-kicker">Short Story Detail</div>
+          <h1 id="story-title">物語を読み込んでいます...</h1>
+          <p id="story-summary" class="story-summary">
+            作品データを取得しています。
+          </p>
+          <div id="story-meta" class="story-meta"></div>
+          <div id="story-tags" class="tag-row"></div>
+        </section>
+
+        <section class="ad-frame glass-panel story-ad" data-aos="zoom-in">
+          <div class="ad-label">Advertisement</div>
+          <ins
+            class="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-6743751614716161"
+            data-ad-slot="1234567890"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          ></ins>
+        </section>
+
+        <article id="story-content" class="story-content glass-panel"></article>
+
+        <aside id="ai-banner" class="ai-banner glass-panel" data-aos="fade-up">
+          <div>
+            <span class="eyebrow">AI Signature</span>
+            <h2>AI生成作品</h2>
+            <p>
+              Plot / Story / Review の3段階で生成・検査した作品です。ホバーすると
+              パイプラインが動きます。
+            </p>
+          </div>
+          <div class="ai-icons">
+            <span><i class="fa-regular fa-lightbulb"></i> Plot</span>
+            <span><i class="fa-solid fa-feather-pointed"></i> Story</span>
+            <span><i class="fa-regular fa-circle-check"></i> Review</span>
+          </div>
+        </aside>
+
+        <section class="section-header story-related-header" data-aos="fade-up">
+          <div>
+            <span class="eyebrow">Continue Reading</span>
+            <h2>次に読む物語</h2>
+          </div>
+          <a class="text-link" href="archive.html">
+            アーカイブへ <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </section>
+        <section id="related-grid" class="post-grid"></section>
+      </main>
+    </div>
+  </body>
+</html>

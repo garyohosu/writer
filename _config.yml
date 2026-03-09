@@ -1,0 +1,7 @@
+title: Daily Short Story
+description: "今日、あなたのための物語を。毎日更新の短編小説サイト。"
+url: "https://garyohosu.github.io"
+baseurl: "/writer"
+permalink: /posts/:slug/
+lang: ja
+timezone: Asia/Tokyo
