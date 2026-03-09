@@ -31,6 +31,37 @@ function storyFilename(entry) {
   return `stories/${entry.date.slice(0, 4)}/${basename}.md`;
 }
 
+function storySourceCandidates(entry) {
+  const localPath = storyFilename(entry);
+  const candidates = [localPath];
+  if (!window.location.hostname.endsWith(".github.io")) {
+    return candidates;
+  }
+
+  const account = window.location.hostname.split(".")[0];
+  const repo = window.location.pathname.split("/").filter(Boolean)[0];
+  if (!account || !repo) {
+    return candidates;
+  }
+
+  candidates.push(`https://raw.githubusercontent.com/${account}/${repo}/main/${localPath}`);
+  return candidates;
+}
+
+async function fetchFirstText(paths) {
+  for (const path of paths) {
+    try {
+      const response = await fetch(path, { cache: "no-store" });
+      if (response.ok) {
+        return response.text();
+      }
+    } catch (error) {
+      // Try the next candidate when the current source is not fetchable.
+    }
+  }
+  throw new Error("story not found");
+}
+
 async function fetchStoriesIndex() {
   try {
     const response = await fetch(STORY_INDEX_PATH, { cache: "no-store" });
@@ -426,11 +457,7 @@ async function renderStory(stories) {
   (story.tags || []).forEach((tag) => tags.appendChild(createTagPill(tag)));
 
   try {
-    const response = await fetch(storyFilename(story), { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error("story not found");
-    }
-    const markdown = await response.text();
+    const markdown = await fetchFirstText(storySourceCandidates(story));
     const parsed = parseStoryMarkdown(markdown);
     const rawHtml = window.marked ? window.marked.parse(parsed.body) : `<p>${parsed.body}</p>`;
     content.innerHTML = rawHtml;
