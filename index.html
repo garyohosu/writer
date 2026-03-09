@@ -52,6 +52,10 @@
         overflow-x: hidden;
       }
 
+      html {
+        scroll-behavior: smooth;
+      }
+
       body::before,
       body::after {
         content: "";
@@ -192,6 +196,34 @@
         font-size: 1.13rem;
       }
 
+      .story-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-top: 0.8rem;
+        color: var(--primary-accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .story-link:hover {
+        filter: brightness(1.08);
+      }
+
+      .section-block {
+        margin-top: 1.8rem;
+        border: 1px solid var(--glass-border);
+        background: var(--glass-bg);
+        border-radius: 16px;
+        padding: 1.2rem;
+      }
+
+      .section-title {
+        margin: 0 0 0.8rem;
+        font-family: "Poppins", sans-serif;
+        font-size: 1.2rem;
+      }
+
       .story-meta {
         margin: 0.3rem 0 0.65rem;
         font-size: 0.9rem;
@@ -244,13 +276,13 @@
       }
     </style>
   </head>
-  <body>
+  <body id="top">
     <header class="container floating-nav" data-aos="fade-down">
       <div class="brand"><i class="fa-solid fa-sparkles"></i> Daily Short Story</div>
       <nav class="nav-links" aria-label="Main navigation">
-        <a href="#">Home</a>
-        <a href="#">Tags</a>
-        <a href="#">Archive</a>
+        <a href="#top">Home</a>
+        <a href="#tags">Tags</a>
+        <a href="#archive">Archive</a>
       </nav>
     </header>
 
@@ -268,19 +300,40 @@
           <h3>3/09 - 琥珀色の猫</h3>
           <p class="story-meta">5分で読める短編 | 幻想・日常</p>
           <p>夜明け前の路地で拾った猫は、誰にも見えないはずの思い出を連れて歩いていた。</p>
+          <a class="story-link" href="#story-2026-03-09">
+            続きを読む <i class="fa-solid fa-arrow-right"></i>
+          </a>
         </article>
 
         <article class="story-card" data-aos="fade-up" data-aos-delay="200">
           <h3>3/08 - 25時のカフェ</h3>
           <p class="story-meta">7分で読める短編 | 人間ドラマ</p>
           <p>閉店後にだけ現れるメニューには、まだ言葉にならない願いが並んでいた。</p>
+          <a class="story-link" href="#story-2026-03-08">
+            続きを読む <i class="fa-solid fa-arrow-right"></i>
+          </a>
         </article>
 
         <article class="story-card" data-aos="fade-up" data-aos-delay="300">
           <h3>3/07 - 記憶の栞</h3>
           <p class="story-meta">6分で読める短編 | 再生・希望</p>
           <p>古書店の栞に書かれた一文は、忘れていた約束の続きを静かに呼び戻す。</p>
+          <a class="story-link" href="#story-2026-03-07">
+            続きを読む <i class="fa-solid fa-arrow-right"></i>
+          </a>
         </article>
+      </section>
+
+      <section id="tags" class="section-block" data-aos="fade-up" data-aos-delay="150">
+        <h2 class="section-title">Tags</h2>
+        <p>幻想 / 日常 / 人間ドラマ / 再生 / 希望</p>
+      </section>
+
+      <section id="archive" class="section-block" data-aos="fade-up" data-aos-delay="250">
+        <h2 class="section-title">Archive</h2>
+        <p><a class="story-link" href="#story-2026-03-09">2026-03-09 琥珀色の猫</a></p>
+        <p><a class="story-link" href="#story-2026-03-08">2026-03-08 25時のカフェ</a></p>
+        <p><a class="story-link" href="#story-2026-03-07">2026-03-07 記憶の栞</a></p>
       </section>
 
       <section class="ad-slot" data-aos="zoom-in" data-aos-delay="500">
@@ -288,6 +341,21 @@
         <div aria-label="adsense placeholder" style="margin-top: 0.6rem; color: var(--text-muted)">
           AdSense枠（一覧下部）
         </div>
+      </section>
+
+      <section id="story-2026-03-09" class="section-block" data-aos="fade-up">
+        <h2 class="section-title">琥珀色の猫</h2>
+        <p>夜明け前の路地で拾った猫は、誰にも見えないはずの思い出を連れて歩いていた。</p>
+      </section>
+
+      <section id="story-2026-03-08" class="section-block" data-aos="fade-up">
+        <h2 class="section-title">25時のカフェ</h2>
+        <p>閉店後にだけ現れるメニューには、まだ言葉にならない願いが並んでいた。</p>
+      </section>
+
+      <section id="story-2026-03-07" class="section-block" data-aos="fade-up">
+        <h2 class="section-title">記憶の栞</h2>
+        <p>古書店の栞に書かれた一文は、忘れていた約束の続きを静かに呼び戻す。</p>
       </section>
     </main>
 
