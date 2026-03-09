@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Short Story</title>
+    <meta
+      name="description"
+      content="今日、あなたのための物語を。毎日1本の短編を届ける Daily Short Story サイト"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/aos@2.3.1/dist/aos.css"
+    />
+
+    <style>
+      :root {
+        --primary-accent: #ffb347;
+        --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        --glass-bg: rgba(255, 255, 255, 0.07);
+        --glass-border: rgba(255, 255, 255, 0.16);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --transition-smooth: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg-gradient);
+        color: var(--text-main);
+        font-family: "Inter", "Hiragino Sans", "Yu Gothic", sans-serif;
+        line-height: 1.65;
+        overflow-x: hidden;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        width: 48vw;
+        height: 48vw;
+        pointer-events: none;
+        border-radius: 50%;
+        filter: blur(60px);
+        z-index: -1;
+        opacity: 0.2;
+        animation: floatGlow 12s ease-in-out infinite;
+      }
+
+      body::before {
+        background: #22d3ee;
+        top: -12vw;
+        left: -8vw;
+      }
+
+      body::after {
+        background: #ffb347;
+        right: -8vw;
+        bottom: -14vw;
+        animation-delay: 2s;
+      }
+
+      @keyframes floatGlow {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(2.5rem);
+        }
+      }
+
+      .container {
+        width: min(1100px, calc(100% - 2rem));
+        margin: 0 auto;
+      }
+
+      .floating-nav {
+        position: sticky;
+        top: 1rem;
+        z-index: 100;
+        margin-top: 1rem;
+        border: 1px solid var(--glass-border);
+        background: var(--glass-bg);
+        backdrop-filter: blur(14px);
+        border-radius: 999px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.65rem 1rem;
+      }
+
+      .brand {
+        font-family: "Poppins", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.92rem;
+      }
+
+      .nav-links a {
+        color: var(--text-main);
+        text-decoration: none;
+        transition: var(--transition-smooth);
+      }
+
+      .nav-links a:hover {
+        color: var(--primary-accent);
+      }
+
+      .hero {
+        padding: 4.5rem 0 2.8rem;
+      }
+
+      .hero-title {
+        font-family: "Poppins", sans-serif;
+        font-size: clamp(2rem, 6.5vw, 4rem);
+        line-height: 1.05;
+        margin: 0;
+      }
+
+      .hero-sub {
+        margin: 1rem 0 2rem;
+        color: var(--text-muted);
+        font-size: clamp(1rem, 2.8vw, 1.2rem);
+      }
+
+      .hero-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        border: 0;
+        background: var(--primary-accent);
+        color: #2a1d05;
+        font-weight: 700;
+        padding: 0.8rem 1.2rem;
+        border-radius: 999px;
+        text-decoration: none;
+        transition: var(--transition-smooth);
+      }
+
+      .hero-cta:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 16px 40px rgba(255, 179, 71, 0.24);
+      }
+
+      .post-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1rem;
+        padding-bottom: 2.2rem;
+      }
+
+      .story-card {
+        grid-column: span 12;
+        padding: 1.2rem;
+        border-radius: 18px;
+        border: 1px solid var(--glass-border);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+        transition: var(--transition-smooth);
+      }
+
+      .story-card h3 {
+        margin: 0;
+        font-size: 1.13rem;
+      }
+
+      .story-meta {
+        margin: 0.3rem 0 0.65rem;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+      }
+
+      .story-card p {
+        margin: 0;
+      }
+
+      .story-card:hover {
+        border-color: rgba(255, 179, 71, 0.45);
+      }
+
+      .ad-slot {
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 1.2rem;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.14);
+      }
+
+      .ad-label {
+        font-size: 0.74rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      footer {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        text-align: center;
+        padding: 2.2rem 0 3.4rem;
+      }
+
+      @media (min-width: 740px) {
+        .story-card {
+          grid-column: span 4;
+        }
+      }
+
+      @media (max-width: 639px) {
+        .floating-nav {
+          border-radius: 20px;
+          padding: 0.8rem;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="container floating-nav" data-aos="fade-down">
+      <div class="brand"><i class="fa-solid fa-sparkles"></i> Daily Short Story</div>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#">Home</a>
+        <a href="#">Tags</a>
+        <a href="#">Archive</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1 id="hero-title" class="hero-title">Daily Short Story</h1>
+        <p id="hero-sub" class="hero-sub">今日、あなたのための物語を。</p>
+        <a class="hero-cta" href="#latest-story">
+          <i class="fa-solid fa-book-open"></i> 最新作を今すぐ読む
+        </a>
+      </section>
+
+      <section id="latest-story" class="post-grid">
+        <article class="story-card" data-aos="fade-up" data-aos-delay="100">
+          <h3>3/09 - 琥珀色の猫</h3>
+          <p class="story-meta">5分で読める短編 | 幻想・日常</p>
+          <p>夜明け前の路地で拾った猫は、誰にも見えないはずの思い出を連れて歩いていた。</p>
+        </article>
+
+        <article class="story-card" data-aos="fade-up" data-aos-delay="200">
+          <h3>3/08 - 25時のカフェ</h3>
+          <p class="story-meta">7分で読める短編 | 人間ドラマ</p>
+          <p>閉店後にだけ現れるメニューには、まだ言葉にならない願いが並んでいた。</p>
+        </article>
+
+        <article class="story-card" data-aos="fade-up" data-aos-delay="300">
+          <h3>3/07 - 記憶の栞</h3>
+          <p class="story-meta">6分で読める短編 | 再生・希望</p>
+          <p>古書店の栞に書かれた一文は、忘れていた約束の続きを静かに呼び戻す。</p>
+        </article>
+      </section>
+
+      <section class="ad-slot" data-aos="zoom-in" data-aos-delay="500">
+        <div class="ad-label">Advertisement</div>
+        <div aria-label="adsense placeholder" style="margin-top: 0.6rem; color: var(--text-muted)">
+          AdSense枠（一覧下部）
+        </div>
+      </section>
+    </main>
+
+    <footer data-aos="fade-in">
+      <p>© 2026 Daily Short Story | Generated by AI (Plot → Story → Review)</p>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    <script>
+      AOS.init({ duration: 800, once: true, easing: "ease-out-cubic" });
+
+      gsap.from("#hero-title", {
+        y: 50,
+        opacity: 0,
+        duration: 0.9,
+        delay: 0.2,
+        ease: "power3.out"
+      });
+
+      gsap.from("#hero-sub", {
+        y: 16,
+        opacity: 0,
+        duration: 0.8,
+        delay: 0.45,
+        ease: "power2.out"
+      });
+
+      VanillaTilt.init(document.querySelectorAll(".story-card"), {
+        max: 8,
+        speed: 450,
+        glare: true,
+        "max-glare": 0.2
+      });
+    </script>
+  </body>
+</html>
