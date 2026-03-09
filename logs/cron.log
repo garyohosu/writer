@@ -67,3 +67,26 @@ Traceback (most recent call last):
   File "/home/garyo/.pyenv/versions/3.12.8/lib/python3.12/subprocess.py", line 571, in run
     raise CalledProcessError(retcode, process.args,
 subprocess.CalledProcessError: Command '['git', 'push']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/scripts/run_daily.py", line 12, in <module>
+    main()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/scripts/run_daily.py", line 8, in main
+    pipeline.run()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 112, in run
+    self._run_stage("publish", self._execute_publish_stage)
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 88, in _run_stage
+    action()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 260, in _execute_publish_stage
+    self.notifier.notify(
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/utils/windows_notifier.py", line 11, in notify
+    subprocess.run(
+  File "/home/garyo/.pyenv/versions/3.12.8/lib/python3.12/subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/garyo/.pyenv/versions/3.12.8/lib/python3.12/subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/home/garyo/.pyenv/versions/3.12.8/lib/python3.12/subprocess.py", line 1955, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'powershell.exe'
