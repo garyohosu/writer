@@ -44,3 +44,26 @@ Traceback (most recent call last):
   File "/home/garyo/.pyenv/versions/3.12.8/lib/python3.12/subprocess.py", line 571, in run
     raise CalledProcessError(retcode, process.args,
 subprocess.CalledProcessError: Command '['git', 'push']' returned non-zero exit status 128.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/scripts/run_daily.py", line 12, in <module>
+    main()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/scripts/run_daily.py", line 8, in main
+    pipeline.run()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 112, in run
+    self._run_stage("publish", self._execute_publish_stage)
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 88, in _run_stage
+    action()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 256, in _execute_publish_stage
+    self.publish_service.run_from_master(
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/services/publish_service.py", line 57, in run_from_master
+    self.git.push()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/utils/git_operations.py", line 36, in push
+    self._run("push")
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/utils/git_operations.py", line 13, in _run
+    return subprocess.run(
+           ^^^^^^^^^^^^^^^
+  File "/home/garyo/.pyenv/versions/3.12.8/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['git', 'push']' returned non-zero exit status 1.
