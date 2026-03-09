@@ -280,7 +280,7 @@ review_score: 86
 | `result` | enum | 実行結果 |
 | `slug` | string \| null | 生成作品の slug |
 | `attempts` | object | 各ステージの試行回数 |
-| `artifacts` | object | 中間生成物のパス |
+| `artifacts` | object | 中間生成物のパス（`plot`, `selected_title`, `story`, `review` など） |
 | `published_commit` | string \| null | push 済みコミットハッシュ |
 
 例:
@@ -295,6 +295,7 @@ review_score: 86
   "attempts": { "story": 1, "review": 2 },
   "artifacts": {
     "plot": "logs/2026-03-09/plot.json",
+    "selected_title": "logs/2026-03-09/selected_title.json",
     "story": "logs/2026-03-09/generation.txt",
     "review": "logs/2026-03-09/review.json"
   },
@@ -305,10 +306,14 @@ review_score: 86
 `publication_mode = manual_review` の承認待ち状態では、`stage: "publish"`、`result: "pending_review"`、`published_commit: null` とする。
 
 ### 9.2 stage 定義
-- `plot` : 企画生成中
+- `plot` : 企画生成中（Plot Agent 実行、Title Selection、plot_bundle 保存を含む）
 - `story` : 本文生成中
 - `review` : 品質検査中
-- `publish` : 公開処理中
+- `publish` : 公開処理中（`sync_posts -> update_index -> git_commit_push -> mark_published`）
+
+`plot` stage の内部サブステップは `generate_plot -> select_title -> persist_plot_bundle` とする。state 上は `plot` のまま扱い、Title Selection のために stage 値を増やさない。
+
+`plot` stage の完了条件は `artifacts.plot` と `artifacts.selected_title` の両方が保存済みであることとする。`artifacts.plot` のみ存在する場合は、次回実行で Title Selection から再開してよい。
 
 ### 9.3 result 定義
 - `in_progress` : 実行中
@@ -320,11 +325,12 @@ review_score: 86
 
 | stage | result | 次回動作 |
 |---|---|---|
+| `plot` | `failed` / `in_progress` | `artifacts.plot` があり `artifacts.selected_title` がなければ Title Selection から再開し、それ以外は Plot Agent から再実行 |
+| `story` | `failed` / `in_progress` | Story Agent から再実行 |
 | `publish` | `pending_review` | `stories/` と `pending/` を保持し、手動公開されるまで自動再生成しない |
 | `publish` | `published` | 当日分スキップ |
-| `publish` | `failed` | 成果物があれば公開処理のみ再実施 |
+| `publish` | `failed` | `sync_posts -> update_index -> git_commit_push -> mark_published` を冪等に再実施 |
 | `review` | `failed` | Story Agent から再生成 |
-| それ以外 | `failed` / `in_progress` | 該当ステージから再実行 |
 
 ---
 
@@ -415,6 +421,12 @@ review_score: 86
 - タイトル訴求力
 を評価する
 
+入力:
+- Story Agent の出力 JSON
+- `banned_terms.json`
+- `stories_index.json` の直近30作品
+- ローカル 3-gram Jaccard 類似度検査結果
+
 出力: **JSON only**（以下スキーマに厳密に従うこと）
 
 ```json
@@ -436,13 +448,16 @@ review_score: 86
 
 - `passed` が `false` の場合、`rewrite_instruction` に再生成指示を必ず記述する
 - `adsense_risk` が `true` の場合は自動的に `passed: false` とする
+- 初回レビュー・自動再生成後レビュー・オペレーター差し戻し後レビューのすべてで、上記と同一の入力セットを使う
 
 ### 11.4 Publish Agent
 役割:
 - Markdown を保存
-- インデックス更新
+- `stories/` 正本から `site/_posts/` を同期
+- `stories_index.json` をアトミック更新
 - Git add / commit / push
-- GitHub Pages へ反映
+- push 成功後に `state.json` を `published` に更新
+- 失敗時は `publish` stage の公開サブステップを冪等再実行できるようにする
 
 ### 11.5 Title Selection Agent
 役割:
@@ -487,37 +502,42 @@ review_score: 86
 5. 過去作一覧読込
 6. Plot Agent 実行 → JSON バリデーション
 7. Title Selection Agent 実行 → 確定タイトル決定 → JSON バリデーション
-8. Story Agent 実行（確定タイトルを渡す）→ JSON バリデーション
-9. Review Agent 実行 → JSON バリデーション
-10. **保存・公開処理**
+8. `plot.json` と `selected_title.json` を保存し、`plot` stage 完了とする
+9. Story Agent 実行（確定タイトルを渡す）→ JSON バリデーション
+10. Review Agent 実行 → JSON バリデーション
+11. **保存・公開処理**
    1. 作品 Markdown を正本として `stories/YYYY/YYYY-MM-DD-slug.md` に書き込む
    2. 正本ファイルを検証する
-   3. `publication_mode = manual_review` の場合:
+   3. `state.json` を `stage: publish`, `result: in_progress` に更新する
+   4. `publication_mode = manual_review` の場合:
       - `pending/YYYY/YYYY-MM-DD-slug.md` に確認用コピーを作成する
       - `state.json` を `stage: publish`, `result: pending_review` に更新する
       - `stories_index.json`、`site/_posts/`、`git push` は更新せず終了する
       - ログ保存
-   4. `publication_mode = automatic` の場合:
+   5. `publication_mode = automatic` の場合:
       - `stories/` 正本から `site/_posts/YYYY-MM-DD-slug.md` を生成または同期する
       - `stories_index.json` をアトミック更新（`.tmp` 経由の `replace`）
       - `git add / commit / push`
       - push 成功確認後に `state.json` を `result: published` に更新する
       - ログ保存
    - **注意**: `manual_review` / `automatic` のいずれでも、push 成功前に `state.json` を `published` に更新しない
+   - `publish` stage の復旧時も、`site/_posts` 同期から `state.json` の `published` 更新までを同じ順序で冪等再実行する
 
 ### 12.2 再生成フロー
 レビュー不合格時:
 
-1. 改善理由を review.json に保存
-2. Story Agent に改善指示を与えて再生成
-3. 最大3回まで再試行
-4. 3回失敗時は `result: failed` とし、以下の通知を発出する:
+1. Review Agent 実行前に、タイトル + 要約に対するローカル 3-gram Jaccard 類似度検査を毎回実施し、その結果を review 入力に含める
+2. 改善理由を review.json に保存
+3. Story Agent に `rewrite_instruction` を与えて再生成
+4. 再レビューでは毎回 `story JSON`、`banned_terms.json`、`stories_index.json` の直近30作品、ローカル類似度検査結果を使う
+5. 最大3回まで再試行
+6. 3回失敗時は `result: failed` とし、以下の通知を発出する:
    - ログファイルに詳細を記録する
    - Windows 通知を発出する（OpenClaw 経由または PowerShell 呼び出し）
      ```bash
      powershell.exe -c "New-BurntToastNotification -Text 'DailyStory', '本日分の生成が3回失敗しました'"
      ```
-5. 公開は行わない
+7. 公開は行わない
 
 ### 12.3 障害時フロー
 - push 失敗時はファイルをローカル保持
@@ -525,6 +545,8 @@ review_score: 86
 - state.json を `failed` に更新
 - 既存公開サイトは維持する
 - 次回実行時に未公開成果物を再処理可能とする
+- `plot` stage 失敗時、`artifacts.plot` が保存済みで `artifacts.selected_title` が未保存なら Title Selection から再開する
+- `publish` stage 失敗時は、`site/_posts` 同期 → `stories_index.json` 更新 → `git add / commit / push` → `state.json` の `published` 更新を冪等に再実施する
 
 ---
 
@@ -580,6 +602,8 @@ if any(jaccard_3gram(candidate, s) > 0.55 for s in recent_30_candidates):
 ```
 
 LLM による類似度・AdSense 適性評価は、このローカル検査を通過した作品にのみ実施する。
+
+この検査と補助入力は、初回レビュー・再生成後レビュー・オペレーター差し戻し後レビューのすべてで共通とする。
 
 ---
 
@@ -917,6 +941,7 @@ wsl bash -lc 'cd /path/to/project && .venv/bin/python scripts/run_daily.py >> lo
 - **デフォルト値は `manual_review` に固定する**（設定ファイル未読時のフォールバックも `manual_review`）
 - `automatic` への切替は品質が安定した段階で行う
 - `manual_review` 時の手動公開は、`pending/` を確認後に `scripts/publish_story.py` を実行し、`stories/` 正本から `site/_posts/` と `stories_index.json` を更新する
+- 手動公開スクリプトは開始時に `state.json` を `stage: publish`, `result: in_progress` に更新し、公開サブステップを automatic と同じ順序で実行する
 - 手動公開スクリプトでも、push 成功確認後に `state.json` を `result: published` に更新する
 
 ---

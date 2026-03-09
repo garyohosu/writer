@@ -26,6 +26,7 @@ sequenceDiagram
     MAIN->>TITLE: title_candidates × 3 + plot + theme + reading_impression
     TITLE-->>MAIN: selected_title JSON
     MAIN->>MAIN: JSON バリデーション
+    MAIN->>MAIN: plot_bundle 保存（plot.json, selected_title.json）
 
     MAIN->>STORY: plot JSON + selected_title
     STORY-->>MAIN: story JSON（title, body, character_count …）
@@ -37,6 +38,8 @@ sequenceDiagram
 
     MAIN->>MAIN: stories/YYYY/YYYY-MM-DD-slug.md 正本保存
     MAIN->>MAIN: 正本ファイル検証
+    MAIN->>STATE: stage: publish, result: in_progress
+    Note over MAIN,STATE: publish は sync_posts -> update_index -> git_commit_push -> mark_published の順で進む
     MAIN->>MAIN: site/_posts/ へ同期
     MAIN->>IDX: stories_index.json アトミック更新（.tmp経由）
     MAIN->>GIT: git add / commit / push
@@ -73,13 +76,16 @@ sequenceDiagram
     PLOT-->>MAIN: plot JSON
     MAIN->>TITLE: title_candidates + plot
     TITLE-->>MAIN: selected_title JSON
+    MAIN->>MAIN: plot_bundle 保存（plot.json, selected_title.json）
     MAIN->>STORY: plot JSON + selected_title
     STORY-->>MAIN: story JSON
     MAIN->>REVIEW: story JSON + banned_terms + 直近30作品
+    Note over MAIN,REVIEW: 毎回レビュー前にローカル 3-gram Jaccard 類似度検査を実施し、その結果も渡す
     REVIEW-->>MAIN: review JSON（passed: true）
 
     MAIN->>MAIN: stories/YYYY/YYYY-MM-DD-slug.md 正本保存
     MAIN->>MAIN: 正本ファイル検証
+    MAIN->>STATE: stage: publish, result: in_progress
     MAIN->>PENDING: pending/YYYY/YYYY-MM-DD-slug.md 確認用コピー作成
     MAIN->>STATE: stage: publish, result: pending_review
     MAIN->>MAIN: ログ保存（自動停止 ※push しない）
@@ -88,7 +94,8 @@ sequenceDiagram
     OPE->>PENDING: 確認用コピーを閲覧・確認
     OPE->>PUB: scripts/publish_story.py 手動実行
 
-    PUB->>MAIN: stories/ 正本から site/_posts/ へ同期
+    PUB->>STATE: stage: publish, result: in_progress
+    PUB->>PUB: stories/ 正本から site/_posts/ へ同期
     PUB->>IDX: stories_index.json アトミック更新
     PUB->>GIT: git add / commit / push
     GIT-->>PUB: push 成功
@@ -105,6 +112,7 @@ sequenceDiagram
     participant MAIN as run_daily.py
     participant STORY as Story Agent
     participant REVIEW as Review Agent
+    participant IDX as stories_index.json
     participant STATE as state.json
     participant LOG as logs/
     participant WIN as Windows 通知
@@ -113,6 +121,7 @@ sequenceDiagram
     STORY-->>MAIN: story JSON
 
     MAIN->>REVIEW: story JSON + banned_terms + 直近30作品
+    Note over MAIN,REVIEW: 初回・再生成後ともにローカル 3-gram Jaccard 類似度検査結果を添付する
     REVIEW-->>MAIN: review JSON（passed: false, rewrite_instruction: "..."）
 
     MAIN->>LOG: review.json に不合格理由を保存（試行 1/3）
@@ -120,7 +129,7 @@ sequenceDiagram
     MAIN->>STORY: plot JSON + selected_title + rewrite_instruction（2回目）
     STORY-->>MAIN: story JSON
 
-    MAIN->>REVIEW: story JSON（再検査）
+    MAIN->>REVIEW: story JSON + banned_terms + 直近30作品（再検査）
     REVIEW-->>MAIN: review JSON（passed: false）
 
     MAIN->>LOG: review.json に不合格理由を保存（試行 2/3）
@@ -128,7 +137,7 @@ sequenceDiagram
     MAIN->>STORY: plot JSON + selected_title + rewrite_instruction（3回目）
     STORY-->>MAIN: story JSON
 
-    MAIN->>REVIEW: story JSON（再検査）
+    MAIN->>REVIEW: story JSON + banned_terms + 直近30作品（再検査）
     REVIEW-->>MAIN: review JSON（passed: false）
 
     MAIN->>LOG: review.json に不合格理由を保存（試行 3/3 上限）
@@ -150,6 +159,8 @@ sequenceDiagram
     participant STORY as Story Agent
     participant REVIEW as Review Agent
     participant PUB as publish_story.py
+    participant STATE as state.json
+    participant IDX as stories_index.json
     participant GIT as Git / GitHub Pages
 
     OPE->>PENDING: 確認用コピーを閲覧
@@ -160,7 +171,8 @@ sequenceDiagram
 
     MAIN->>STORY: plot JSON + selected_title + 差し戻し理由
     STORY-->>MAIN: story JSON（再生成）
-    MAIN->>REVIEW: story JSON
+    MAIN->>REVIEW: story JSON + banned_terms + 直近30作品
+    Note over MAIN,REVIEW: 差し戻し後もローカル 3-gram Jaccard 類似度検査結果を添付
     REVIEW-->>MAIN: review JSON（passed: true）
 
     MAIN->>STORIES: stories/ 正本を上書き保存
@@ -168,9 +180,12 @@ sequenceDiagram
 
     OPE->>PENDING: 再確認
     OPE->>PUB: scripts/publish_story.py 手動実行（承認）
+    PUB->>STATE: stage: publish, result: in_progress
+    PUB->>PUB: stories/ 正本から site/_posts/ へ同期
+    PUB->>IDX: stories_index.json アトミック更新
     PUB->>GIT: git add / commit / push
     GIT-->>PUB: push 成功
-    PUB->>PUB: state.json: result: published
+    PUB->>STATE: stage: publish, result: published, published_commit: <hash>
     GIT->>GIT: GitHub Pages 公開
 ```
 
@@ -196,22 +211,31 @@ sequenceDiagram
     OPE->>WIN: 通知受信
     OPE->>LOG: logs/YYYY-MM-DD/run.log 確認
     OPE->>STATE: state.json の stage / result を確認
+    Note over MAIN,STATE: plot stage は Plot Agent -> Title Selection Agent -> plot_bundle 保存を内包する
 
-    alt stage=plot or story, result=failed or in_progress
-        OPE->>MAIN: run_daily.py 再実行（plot / story ステージから）
-        MAIN->>MAIN: 企画・タイトル・本文 再生成パイプライン
+    alt stage=plot, result=failed or in_progress
+        OPE->>MAIN: run_daily.py 再実行（plot stage）
+        MAIN->>MAIN: artifacts.plot があり artifacts.selected_title がなければ Title Selection から再開
+        MAIN->>MAIN: それ以外は Plot Agent から再実行
+    else stage=story, result=failed or in_progress
+        OPE->>MAIN: run_daily.py 再実行（story stage）
+        MAIN->>MAIN: Story Agent から再実行
     else stage=review, result=failed
         OPE->>MAIN: run_daily.py --from-stage story
         MAIN->>MAIN: Story Agent から再生成
     else stage=publish, result=failed
         OPE->>MAIN: run_daily.py --from-stage publish
-        MAIN->>GIT: git push のみ再試行
+        MAIN->>STATE: stage: publish, result: in_progress
+        MAIN->>MAIN: site/_posts 同期 → stories_index 更新 → git add / commit / push を冪等再実行
+        GIT-->>MAIN: push 成功
+        MAIN->>STATE: stage: publish, result: published, published_commit: <hash>
     else stage=publish, result=pending_review
         OPE->>OPE: pending/ を確認後に手動公開を判断
         OPE->>MAIN: scripts/publish_story.py 手動実行
-        MAIN->>GIT: git add / commit / push
+        MAIN->>STATE: stage: publish, result: in_progress
+        MAIN->>MAIN: site/_posts 同期 → stories_index 更新 → git add / commit / push
         GIT-->>MAIN: push 成功
-        MAIN->>STATE: result: published
+        MAIN->>STATE: stage: publish, result: published, published_commit: <hash>
     end
 
     Note over CRON,STATE: 翌日 05:00 になった場合も同じ再開判定ルール（§9.4）が適用される

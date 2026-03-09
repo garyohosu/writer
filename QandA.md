@@ -115,3 +115,31 @@ SPEC.md の修正・実装検討中に判明した不明点を記録する。
 **該当箇所**: SPEC.md §15.2, ui.md §3, ui.md §6, ui.md §9
 **回答**: MVP では一覧ページ上部広告は採用せず、固定枠は「記事上部・記事下部・一覧下部」の3枠に統一する
 **反映内容**: §15.2 に「一覧ページ上部には広告を置かない」を追記し、固定枠3箇所の方針を明確化。
+
+---
+
+### Q17. `publish` 開始時の `state.json` はどこで `in_progress` に遷移させるか？ ✅ 解決済み
+**該当箇所**: SPEC.md §9.2, §12.1, §25.1 / sequence.md §1, §2, §5
+**回答**: `stories/` 正本の保存・検証後、公開サブステップ開始前に `stage: publish`, `result: in_progress` を保存する
+**反映内容**: §12.1 に publish 開始時の state 遷移を追加。`manual_review` / `automatic` / 手動公開の全経路で同じ開始条件に統一。sequence 図にも `publish` 開始時の state 更新を追記。
+
+---
+
+### Q18. Title Selection の復旧単位はどう扱うか？ ✅ 解決済み
+**該当箇所**: SPEC.md §9.1, §9.2, §9.4 / sequence.md §5
+**回答**: Title Selection Agent は独立 agent とするが、state 上は `plot` stage に内包する。`artifacts.plot` が保存済みで `artifacts.selected_title` が未保存なら Title Selection から再開する
+**反映内容**: §9.1 の `artifacts` に `selected_title` を追加。§9.2 で `plot` stage の内部サブステップを定義し、§9.4 の再開判定を artifact ベースに更新。sequence 図の障害復旧フローにも反映。
+
+---
+
+### Q19. `publish` 復旧は `git push` のみ再試行するか？ ✅ 解決済み
+**該当箇所**: SPEC.md §9.2, §9.4, §11.4, §12.1, §12.3 / sequence.md §5
+**回答**: `git push` のみ再試行にはせず、`site/_posts` 同期、`stories_index.json` 更新、`git add / commit / push`、`published` 更新までを冪等再実行する
+**反映内容**: §9.2 と §11.4 に publish サブステップを明記。§9.4 と §12.3 の復旧仕様を「公開サブステップの冪等再実行」に統一し、障害シーケンス図の `git push のみ再試行` を置き換えた。
+
+---
+
+### Q20. 再レビュー時の入力は初回と同じか？ ✅ 解決済み
+**該当箇所**: SPEC.md §11.3, §12.2, §13.3 / sequence.md §2, §3, §4
+**回答**: 同じとする。初回・自動再生成後・オペレーター差し戻し後のすべてで `story JSON`、`banned_terms.json`、直近30作品、ローカル 3-gram 類似度検査結果を使う
+**反映内容**: §11.3 に Review Agent 入力を追加し、§12.2 と §13.3 に再レビュー時も同一入力セットを使うことを明記。sequence 図の再検査経路も初回と同等の入力に更新。
