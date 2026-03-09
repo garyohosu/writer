@@ -188,14 +188,22 @@ project-root/
     publish_story.py
     rebuild_indexes.py
   pending/
-    （manual_review モード時の公開前一時置き場）
+    2026/
+      2026-03-09-midnight-cat.md
   site/
     _posts/
+      2026-03-09-midnight-cat.md
     _includes/
     ads.txt
     privacy-policy.md
     contact.md
 ```
+
+### 7.1 保存先の役割分担
+- `stories/` を作品 Markdown の**正本**とする
+- `pending/` は `manual_review` モード時の**確認用コピー置き場**とする
+- `site/_posts/` は Jekyll 公開用の**派生物**とし、公開時に `stories/` から生成または同期する
+- 人手による修正・再レビューは必ず `stories/` 側に対して行い、`pending/` や `site/_posts/` を直接編集しない
 
 ---
 
@@ -207,6 +215,8 @@ project-root/
 - 読了時間の目安を付与
 - 必ずタイトル、要約、タグ、公開日を持つ
 - 1作品ごとに一意の slug を持つ
+- 本文量は `word_count` ではなく `character_count` で管理する
+- `character_count` は YAML front matter を除いた本文文字数とし、表示・制約・集計で同じ値を使う
 
 ### 8.2 作品形式
 作品は Markdown で保存する。
@@ -221,7 +231,7 @@ slug: "2026-03-09-midnight-cat"
 tags: ["猫", "日常", "不思議"]
 genre: "短編"
 theme: "疲れた心に小さな異界が触れる"
-word_count: 3120
+character_count: 3120
 reading_time_min: 6
 status: "published"
 summary: "夜勤明けの技術者が、会社の片隅で奇妙な猫に出会う短編。"
@@ -293,6 +303,8 @@ review_score: 86
 }
 ```
 
+`publication_mode = manual_review` の承認待ち状態では、`stage: "publish"`、`result: "pending_review"`、`published_commit: null` とする。
+
 ### 9.2 stage 定義
 - `plot` : 企画生成中
 - `story` : 本文生成中
@@ -302,14 +314,16 @@ review_score: 86
 ### 9.3 result 定義
 - `in_progress` : 実行中
 - `failed` : 異常終了
+- `pending_review` : レビュー合格済みで、人手承認待ち
 - `published` : 公開済み
 
 ### 9.4 再開判定ルール
 
 | stage | result | 次回動作 |
 |---|---|---|
+| `publish` | `pending_review` | `stories/` と `pending/` を保持し、手動公開されるまで自動再生成しない |
 | `publish` | `published` | 当日分スキップ |
-| `publish` | `failed` | 成果物があれば再 push のみ実施 |
+| `publish` | `failed` | 成果物があれば公開処理のみ再実施 |
 | `review` | `failed` | Story Agent から再生成 |
 | それ以外 | `failed` / `in_progress` | 該当ステージから再実行 |
 
@@ -329,7 +343,7 @@ review_score: 86
     "title": "夜勤明けの猫はエレベーターを待っていた",
     "summary": "夜勤明けの技術者が、会社の片隅で奇妙な猫に出会う短編。",
     "tags": ["猫", "日常", "不思議"],
-    "word_count": 3120,
+    "character_count": 3120,
     "reading_time_min": 6,
     "review_score": 86
   }
@@ -385,7 +399,7 @@ review_score: 86
 {
   "title": "確定タイトル",
   "body": "本文（2000〜5000字）",
-  "word_count": 3120,
+  "character_count": 3120,
   "reading_time_min": 6,
   "summary": "要約（100〜200字）",
   "tags": ["タグ1", "タグ2"]
@@ -476,15 +490,21 @@ review_score: 86
 7. Title Selection Agent 実行 → 確定タイトル決定 → JSON バリデーション
 8. Story Agent 実行（確定タイトルを渡す）→ JSON バリデーション
 9. Review Agent 実行 → JSON バリデーション
-10. **公開処理（以下の順で必ず実施し、アトミック性を確保する）**
-   1. Markdown をステージング領域に書き込む
-   2. ステージングファイルを検証する
-   3. `stories_index.json` をアトミック更新（`.tmp` 経由の `replace`）
-   4. Markdown を本番パスへ移動
-   5. `git add / commit / push`
-   6. push 成功確認後に `state.json` を `result: published` に更新
-   7. ログ保存
-   - **注意**: step 5 の push 成功前に `state.json` を更新しない
+10. **保存・公開処理**
+   1. 作品 Markdown を正本として `stories/YYYY/YYYY-MM-DD-slug.md` に書き込む
+   2. 正本ファイルを検証する
+   3. `publication_mode = manual_review` の場合:
+      - `pending/YYYY/YYYY-MM-DD-slug.md` に確認用コピーを作成する
+      - `state.json` を `stage: publish`, `result: pending_review` に更新する
+      - `stories_index.json`、`site/_posts/`、`git push` は更新せず終了する
+      - ログ保存
+   4. `publication_mode = automatic` の場合:
+      - `stories/` 正本から `site/_posts/YYYY-MM-DD-slug.md` を生成または同期する
+      - `stories_index.json` をアトミック更新（`.tmp` 経由の `replace`）
+      - `git add / commit / push`
+      - push 成功確認後に `state.json` を `result: published` に更新する
+      - ログ保存
+   - **注意**: `manual_review` / `automatic` のいずれでも、push 成功前に `state.json` を `published` に更新しない
 
 ### 12.2 再生成フロー
 レビュー不合格時:
@@ -502,6 +522,7 @@ review_score: 86
 
 ### 12.3 障害時フロー
 - push 失敗時はファイルをローカル保持
+- `stories/` 正本は保持し、`manual_review` 中なら `pending/` コピーも保持する
 - state.json を `failed` に更新
 - 既存公開サイトは維持する
 - 次回実行時に未公開成果物を再処理可能とする
@@ -530,21 +551,32 @@ review_score: 86
 ### 13.3 類似度抑制
 以下を必須とする。
 
-- 直近30作品の要約を比較対象に含める
+- 直近30作品のタイトル + 要約を比較対象に含める
 - 舞台、主人公属性、オチ類型が連続しすぎないよう制約を設ける
 - タイトル冒頭語の重複を避ける
 - 同一テーマが再出現しないよう used_themes.json を参照する（**保持期間: 直近90日**）
 
 **ローカル事前検査（LLM 判定の前に必ず実施する）**
 
-Jaccard 類似度で直近30作品の要約と比較し、閾値を超えた場合は Story Agent に差し戻す。
+日本語作品では、タイトル + 要約を連結した文字列に対して**文字 3-gram Jaccard 類似度**を用いる。比較対象は直近30作品の `title + summary` とし、初期閾値は `0.55` とする。将来、必要に応じて形態素解析ベースへ差し替えてよい。
 
 ```python
-def jaccard(a: str, b: str) -> float:
-    sa, sb = set(a.lower().split()), set(b.lower().split())
+def char_ngrams(text: str, n: int = 3) -> set[str]:
+    normalized = "".join(text.lower().split())
+    if not normalized:
+        return set()
+    if len(normalized) < n:
+        return {normalized}
+    return {normalized[i:i+n] for i in range(len(normalized) - n + 1)}
+
+def jaccard_3gram(a: str, b: str) -> float:
+    sa, sb = char_ngrams(a), char_ngrams(b)
     return len(sa & sb) / max(1, len(sa | sb))
 
-if any(jaccard(new_summary, s) > 0.55 for s in recent_30_summaries):
+candidate = f"{new_title}\n{new_summary}"
+recent_30_candidates = [f"{s['title']}\n{s['summary']}" for s in recent_30_stories]
+
+if any(jaccard_3gram(candidate, s) > 0.55 for s in recent_30_candidates):
     raise ValueError("summary_too_similar")
 ```
 
@@ -630,6 +662,7 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 | 一覧下部 | 一覧ページ末尾 | 1枠 |
 
 - サイドバーなし・モバイルファースト構成を優先する
+- 一覧ページ上部には広告を置かない
 - 自動広告は品質安定後に様子を見て追加を検討する
 
 ### 15.3 注意事項
@@ -646,9 +679,12 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 - GitHub Pages で静的公開する
 - Jekyll + Chirpy テーマを使用する（MVP では固定）
 - **当面は GitHub Pages 標準 URL（`garyohosu.github.io/writer` 相当）で運用する**
+- `_config.yml` に `url: "https://garyohosu.github.io"`、`baseurl: "/writer"`、`permalink: /posts/:slug/` を明示する
+- サイト内リンク、ナビゲーション、canonical URL、OGP URL は `{{ site.url }}{{ site.baseurl }}{{ page.url }}` を基準に生成する
 - 独自ドメインへの移行は後から可能だが、MVP 期間中は不要とする
 
 ### 16.2 必要ファイル
+- _config.yml
 - index.html または一覧テンプレート
 - 作品ページテンプレート
 - privacy-policy.md
@@ -659,6 +695,7 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 
 ### 16.3 SEO 基本要件
 - title, description, og tags を作品ごとに生成
+- canonical / `og:url` は `{{ site.url }}{{ site.baseurl }}{{ page.url }}` で統一する
 - 日付・要約・タグを埋め込む
 - sitemap を更新
 - 内部リンクを自動更新する
@@ -821,10 +858,12 @@ wsl bash -lc 'cd /path/to/project && .venv/bin/python scripts/run_daily.py >> lo
 - WSL2 内で Codex CLI を呼び出せる
 - 作品が所定文字数で生成される
 - レビュー不合格時に差し戻しされる
+- `manual_review` ではレビュー合格後に `pending_review` で停止できる
 - 合格時のみ公開される
 - GitHub Pages に反映される
 - AdSense コードがテンプレートに含まれる
 - ads.txt / privacy-policy / contact が存在する
+- `stories/` を正本、`site/_posts/` を公開用派生物として運用できる
 - state.json と stories_index.json が更新される
 - ログが残る
 
@@ -875,12 +914,13 @@ wsl bash -lc 'cd /path/to/project && .venv/bin/python scripts/run_daily.py >> lo
 
 | 値 | 動作 |
 |---|---|
-| `manual_review` | 生成・レビュー後に `pending/` フォルダへ移動し、人間が確認後に手動公開 |
+| `manual_review` | 生成・レビュー後に `stories/` を正本保存し、`pending/` に確認用コピーを置いて `result: pending_review` で停止する |
 | `automatic` | レビュー合格後に自動で push・公開 |
 
 - **デフォルト値は `manual_review` に固定する**（設定ファイル未読時のフォールバックも `manual_review`）
 - `automatic` への切替は品質が安定した段階で行う
-- `manual_review` 時の公開手順: `pending/` 内のファイルを確認 → `scripts/publish_story.py` を手動実行
+- `manual_review` 時の手動公開は、`pending/` を確認後に `scripts/publish_story.py` を実行し、`stories/` 正本から `site/_posts/` と `stories_index.json` を更新する
+- 手動公開スクリプトでも、push 成功確認後に `state.json` を `result: published` に更新する
 
 ---
 

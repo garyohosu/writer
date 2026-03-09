@@ -3,6 +3,7 @@
 
 **Theme:** Jekyll + Chirpy
 **方針:** モバイルファースト・モダン技術ブログ的外観・CDN 利用・AdSense 固定枠3箇所
+**URL 前提:** GitHub Pages の project site として運用し、内部リンクは `{{ site.baseurl }}` を前置する
 
 ---
 
@@ -10,15 +11,15 @@
 
 ```mermaid
 graph TD
-    TOP["🏠 トップページ\n（作品一覧）"]
-    ARTICLE["📖 記事詳細ページ\n/posts/:slug"]
-    TAG["🏷️ タグ一覧\n/tags/"]
-    ARCHIVE["📅 月別アーカイブ\n/archives/"]
-    PRIVACY["🔒 プライバシーポリシー\n/privacy-policy/"]
-    CONTACT["✉️ お問い合わせ\n/contact/"]
-    ADS["📄 ads.txt\n（サイトルート）"]
-    SITEMAP["🗺️ sitemap.xml"]
-    ROBOTS["🤖 robots.txt"]
+    TOP["🏠 トップページ\n{{ site.baseurl }}/"]
+    ARTICLE["📖 記事詳細ページ\n{{ site.baseurl }}/posts/:slug/"]
+    TAG["🏷️ タグ一覧\n{{ site.baseurl }}/tags/"]
+    ARCHIVE["📅 月別アーカイブ\n{{ site.baseurl }}/archives/"]
+    PRIVACY["🔒 プライバシーポリシー\n{{ site.baseurl }}/privacy-policy/"]
+    CONTACT["✉️ お問い合わせ\n{{ site.baseurl }}/contact/"]
+    ADS["📄 ads.txt\n{{ site.baseurl }}/ads.txt"]
+    SITEMAP["🗺️ sitemap.xml\n{{ site.baseurl }}/sitemap.xml"]
+    ROBOTS["🤖 robots.txt\n{{ site.baseurl }}/robots.txt"]
 
     TOP --> ARTICLE
     TOP --> TAG
@@ -63,22 +64,20 @@ graph TD
     subgraph PAGE["トップページ（モバイル幅 max 768px 基準）"]
         HD["━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🏠  DailyShortStory  ☰\n━━━━━━━━━━━━━━━━━━━━━━━━━━━\nヘッダー / サイト名 / ハンバーガーメニュー"]
 
-        AD1["┌─────────────────────────┐\n│  📢 AdSense 固定枠①     │\n│      一覧ページ上部      │\n└─────────────────────────┘"]
-
         HERO["━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✨ 最新作品ピックアップ\n『タイトル』\n要約テキスト…  [続きを読む →]\n━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
 
-        CARD1["┌─────────────────────────┐\n│ 2026-03-09  #猫 #日常   │\n│ 📖 タイトルA            │\n│ 要約テキスト（2行）      │\n│ 読了時間 6分  スコア 86  │\n└─────────────────────────┘"]
+        CARD1["┌─────────────────────────┐\n│ 2026-03-09  #猫 #日常   │\n│ 📖 タイトルA            │\n│ 要約テキスト（2行）      │\n│ 読了時間 6分  文字数 3120 │\n│ スコア 86                │\n└─────────────────────────┘"]
 
-        CARD2["┌─────────────────────────┐\n│ 2026-03-08  #SF         │\n│ 📖 タイトルB            │\n│ 要約テキスト（2行）      │\n│ 読了時間 5分  スコア 82  │\n└─────────────────────────┘"]
+        CARD2["┌─────────────────────────┐\n│ 2026-03-08  #SF         │\n│ 📖 タイトルB            │\n│ 要約テキスト（2行）      │\n│ 読了時間 5分  文字数 2870 │\n│ スコア 82                │\n└─────────────────────────┘"]
 
         DOTS["…（日付降順で続く）"]
 
-        AD2["┌─────────────────────────┐\n│  📢 AdSense 固定枠②     │\n│      一覧ページ下部      │\n└─────────────────────────┘"]
+        AD1["┌─────────────────────────┐\n│  📢 AdSense 固定枠       │\n│      一覧ページ下部      │\n└─────────────────────────┘"]
 
         FT["━━━━━━━━━━━━━━━━━━━━━━━━━━━\nフッター\nプライバシーポリシー | お問い合わせ\nAI生成コンテンツ明記 | © DailyShortStory\n━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
     end
 
-    HD --> AD1 --> HERO --> CARD1 --> CARD2 --> DOTS --> AD2 --> FT
+    HD --> HERO --> CARD1 --> CARD2 --> DOTS --> AD1 --> FT
 ```
 
 ---
@@ -90,7 +89,7 @@ graph TD
     subgraph PAGE["記事詳細ページ"]
         HD["━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🏠  DailyShortStory  ☰\n━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
 
-        META["━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📖 タイトル\n2026-03-09  読了 6分  #猫 #日常\n━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
+        META["━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📖 タイトル\n2026-03-09  読了 6分  文字数 3120  #猫 #日常\n━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
 
         AD1["┌─────────────────────────┐\n│  📢 AdSense 固定枠①     │\n│      記事上部            │\n└─────────────────────────┘"]
 
@@ -136,8 +135,7 @@ graph TD
 ```mermaid
 graph LR
     subgraph LIST["一覧ページ"]
-        LA1["枠① 上部"]
-        LA2["枠② 下部"]
+        LA1["枠① 下部のみ"]
     end
 
     subgraph ARTICLE["記事ページ"]
@@ -149,6 +147,7 @@ graph LR
         R1["固定枠のみ\n（自動広告は MVP 期間中使用しない）"]
         R2["本文を広告で分断しない"]
         R3["モバイル幅を優先\n（300×250 or レスポンシブ）"]
+        R4["一覧ページ上部には\n広告を置かない"]
     end
 
     LIST -.->|適用| RULE
@@ -179,10 +178,10 @@ graph TD
     BASE["Chirpy テーマ（ベース）"]
 
     subgraph CUSTOM["カスタマイズ箇所"]
-        C1["_config.yml\n・サイト名・説明\n・lang: ja\n・timezone: Asia/Tokyo"]
+        C1["_config.yml\n・サイト名・説明\n・lang: ja\n・timezone: Asia/Tokyo\n・url / baseurl / permalink"]
         C2["_includes/\n・AdSense スニペット追加\n・AI生成明記バナー"]
         C3["assets/css/\n・フォント調整（CDN: Google Fonts）\n・カラー変数上書き"]
-        C4["_layouts/\n・post.html に広告枠挿入\n・home.html にヒーロー記事追加"]
+        C4["_layouts/\n・post.html に広告枠挿入\n・home.html にヒーロー記事追加\n・内部リンクは site.baseurl 前提"]
     end
 
     BASE --> C1
@@ -199,10 +198,11 @@ graph TD
 graph TD
     subgraph COMMON["全ページ共通"]
         CM1["✅ AdSense スクリプト（head内）"]
-        CM2["✅ title / description / og tags"]
+        CM2["✅ title / description / og tags / canonical / og:url"]
         CM3["✅ グローバルナビ"]
         CM4["✅ フッター（プライバシー・お問い合わせリンク）"]
         CM5["✅ AI生成コンテンツ明記"]
+        CM6["✅ 内部リンクは site.baseurl 前提"]
     end
 
     subgraph ARTICLE_REQ["記事ページのみ"]
@@ -214,8 +214,9 @@ graph TD
     end
 
     subgraph LIST_REQ["一覧ページのみ"]
-        LR1["✅ AdSense 枠② 一覧下部"]
+        LR1["✅ AdSense 枠① 一覧下部"]
         LR2["✅ 最新作品ヒーロー表示"]
         LR3["✅ 日付降順カード一覧"]
+        LR4["✅ 一覧ページ上部広告なし"]
     end
 ```

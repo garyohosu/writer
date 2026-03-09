@@ -73,3 +73,45 @@ SPEC.md の修正・実装検討中に判明した不明点を記録する。
 **該当箇所**: SPEC.md §3.1, §18.3
 **回答**: (a) venv
 **反映内容**: §3.1 の使用技術に「Python venv」を追記。§18.3 を新設し、セットアップ手順・cron 実行時の絶対パス指定・conda/uv 不使用の理由を明記。
+
+---
+
+### Q11. `manual_review` 時の `state.json` の状態遷移はどう表現するか？ ✅ 解決済み
+**該当箇所**: SPEC.md §9.2, §9.3, §9.4, §12.1, §25.1
+**回答**: `result` に `pending_review` を追加し、`manual_review` ではレビュー合格後に `stage: publish`, `result: pending_review` で停止する
+**反映内容**: §9.3 に `pending_review` を追加。§9.4 に「自動再生成せず据え置く」再開判定を追加。§12.1 と §25.1 に `manual_review` の保存・停止フローを明記。
+
+---
+
+### Q12. 作品 Markdown の正本保存先は `stories/`・`pending/`・`site/_posts/` のどれか？ ✅ 解決済み
+**該当箇所**: SPEC.md §7, §12.1, §25.1
+**回答**: 正本は `stories/` に一本化し、`pending/` は確認用コピー、`site/_posts/` は公開用派生物とする
+**反映内容**: §7.1 を新設して役割分担を明文化。§12.1 で `stories/` 正本保存 → `pending/` コピー or `site/_posts/` 同期の分岐を定義。§25.1 の手動公開手順も `stories/` 正本起点に修正。
+
+---
+
+### Q13. GitHub Pages の URL / permalink / `baseurl` はどう統一するか？ ✅ 解決済み
+**該当箇所**: SPEC.md §16.1, ui.md §1
+**回答**: `_config.yml` に `url: "https://garyohosu.github.io"`, `baseurl: "/writer"`, `permalink: /posts/:slug/` を明記し、リンク生成は `site.baseurl` 前提に統一する
+**反映内容**: §16.1 に `_config.yml` の必須設定値と URL 生成ルールを追記。§16.2 に `_config.yml` を必要ファイルとして追加。§16.3 に canonical / `og:url` の生成式を明記。
+
+---
+
+### Q14. 日本語要約のローカル類似度検査はどの単位で比較するか？ ✅ 解決済み
+**該当箇所**: SPEC.md §13.3
+**回答**: MVP ではタイトル + 要約を対象に、文字 3-gram Jaccard 類似度を用いる
+**反映内容**: §13.3 のローカル事前検査を日本語向け 3-gram 方式に変更。比較対象を `title + summary` に拡張し、コード例も更新。将来の形態素解析差し替え余地を注記。
+
+---
+
+### Q15. `word_count` は「単語数」か「文字数」か？ ✅ 解決済み
+**該当箇所**: SPEC.md §8.1, §8.2, §11.2, ui.md §9
+**回答**: 日本語サイト前提で、単位は文字数に統一し、フィールド名も `character_count` に変更する
+**反映内容**: §8.1 に `character_count` の定義を追加。§8.2 の front matter 例、§10 の `stories_index.json` 例、§11.2 の Story Agent 出力例を `character_count` に変更。
+
+---
+
+### Q16. 一覧ページ上部の広告枠は採用するか？ ✅ 解決済み
+**該当箇所**: SPEC.md §15.2, ui.md §3, ui.md §6, ui.md §9
+**回答**: MVP では一覧ページ上部広告は採用せず、固定枠は「記事上部・記事下部・一覧下部」の3枠に統一する
+**反映内容**: §15.2 に「一覧ページ上部には広告を置かない」を追記し、固定枠3箇所の方針を明確化。
