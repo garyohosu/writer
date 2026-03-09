@@ -68,7 +68,7 @@ googleアドセンスを各ページに入れておくこと
 - OpenClaw
 - GitHub Pages
 - Markdown ベースのコンテンツ管理
-- Jekyll または単純な静的HTML生成スクリプト
+- Jekyll（GitHub Pages 標準、MVP では固定）
 - Google AdSense
 - ads.txt 配置
 
@@ -185,7 +185,7 @@ project-root/
     publish_story.py
     rebuild_indexes.py
   site/
-    _posts/ or content/
+    _posts/
     _includes/
     ads.txt
     privacy-policy.md
@@ -239,37 +239,59 @@ review_score: 86
 ## 9. 状態管理仕様
 
 ### 9.1 state.json
-日次実行の状態を保持する。
+日次実行の状態を単一レコードで保持する。`status` と `pipeline_stage` の二重管理は廃止し、`stage` と `result` の組み合わせで再開判定を行う。
+
+フィールド定義:
+
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `run_date` | string (ISO 8601, JST) | 実行対象日 |
+| `job_id` | string (UUID) | 実行識別子 |
+| `stage` | enum | 現在パイプライン段階 |
+| `result` | enum | 実行結果 |
+| `slug` | string \| null | 生成作品の slug |
+| `attempts` | object | 各ステージの試行回数 |
+| `artifacts` | object | 中間生成物のパス |
+| `published_commit` | string \| null | push 済みコミットハッシュ |
 
 例:
 
 ```json
 {
-  "last_run_date": "2026-03-09",
-  "last_published_slug": "2026-03-09-midnight-cat",
-  "status": "published",
-  "retry_count": 0,
-  "last_review_score": 86,
-  "pipeline_stage": "done"
+  "run_date": "2026-03-09",
+  "job_id": "a1b2c3d4-0000-0000-0000-000000000000",
+  "stage": "publish",
+  "result": "published",
+  "slug": "2026-03-09-midnight-cat",
+  "attempts": { "story": 1, "review": 2 },
+  "artifacts": {
+    "plot": "logs/2026-03-09/plot.json",
+    "story": "logs/2026-03-09/generation.txt",
+    "review": "logs/2026-03-09/review.json"
+  },
+  "published_commit": "abc1234"
 }
 ```
 
-### 9.2 ステータス定義
-- `idle` : 待機中
-- `plot_generated` : 企画生成完了
-- `story_generated` : 本文生成完了
-- `review_failed` : レビュー不合格
-- `ready_to_publish` : 公開可能
-- `published` : 公開済み
-- `failed` : 異常終了
+### 9.2 stage 定義
+- `plot` : 企画生成中
+- `story` : 本文生成中
+- `review` : 品質検査中
+- `publish` : 公開処理中
 
-### 9.3 pipeline_stage
-- `start`
-- `plot`
-- `story`
-- `review`
-- `publish`
-- `done`
+### 9.3 result 定義
+- `in_progress` : 実行中
+- `failed` : 異常終了
+- `published` : 公開済み
+
+### 9.4 再開判定ルール
+
+| stage | result | 次回動作 |
+|---|---|---|
+| `publish` | `published` | 当日分スキップ |
+| `publish` | `failed` | 成果物があれば再 push のみ実施 |
+| `review` | `failed` | Story Agent から再生成 |
+| それ以外 | `failed` / `in_progress` | 該当ステージから再実行 |
 
 ---
 
@@ -310,18 +332,40 @@ review_score: 86
 - 禁止事項
 - 本日の生成ルール
 
-出力:
-- タイトル候補3件
-- 200〜400字のプロット
-- 主要登場人物情報
-- テーマ
-- 想定読後感
+出力: **JSON only**（以下スキーマに厳密に従うこと）
+
+```json
+{
+  "title_candidates": ["候補A", "候補B", "候補C"],
+  "plot": "200〜400字のプロット本文",
+  "characters": [
+    { "name": "主人公名", "role": "主人公", "attribute": "属性説明" }
+  ],
+  "theme": "テーマ一文",
+  "setting": "舞台説明",
+  "ending_type": "ハッピー|バッドエンド|余韻系|etc",
+  "reading_impression": "想定読後感"
+}
+```
 
 ### 11.2 Story Agent
 役割:
 - プロットから本文を書く
 - 指定文字数に収める
 - 文体ガイドを守る
+
+出力: **JSON only**（以下スキーマに厳密に従うこと）
+
+```json
+{
+  "title": "確定タイトル",
+  "body": "本文（2000〜5000字）",
+  "word_count": 3120,
+  "reading_time_min": 6,
+  "summary": "要約（100〜200字）",
+  "tags": ["タグ1", "タグ2"]
+}
+```
 
 ### 11.3 Review Agent
 役割:
@@ -332,6 +376,28 @@ review_score: 86
 - 禁止事項
 - タイトル訴求力
 を評価する
+
+出力: **JSON only**（以下スキーマに厳密に従うこと）
+
+```json
+{
+  "passed": true,
+  "scores": {
+    "originality": 85,
+    "readability": 80,
+    "consistency": 90,
+    "hook": 78,
+    "ending": 82,
+    "overall": 83
+  },
+  "issues": ["問題点1", "問題点2"],
+  "adsense_risk": false,
+  "rewrite_instruction": null
+}
+```
+
+- `passed` が `false` の場合、`rewrite_instruction` に再生成指示を必ず記述する
+- `adsense_risk` が `true` の場合は自動的に `passed: false` とする
 
 ### 11.4 Publish Agent
 役割:
@@ -347,17 +413,21 @@ review_score: 86
 ### 12.1 通常フロー
 1. OpenClaw cron が日次実行
 2. WSL2 上で run_daily.py を起動
-3. state.json を確認
+3. state.json を確認し再開判定（§9.4参照）
 4. 当日分作品未生成なら処理継続
 5. 過去作一覧読込
-6. Plot Agent 実行
-7. Story Agent 実行
-8. Review Agent 実行
-9. 合格なら Markdown 保存
-10. stories_index.json 更新
-11. GitHub へ push
-12. state.json を `published` に更新
-13. ログ保存
+6. Plot Agent 実行 → JSON バリデーション
+7. Story Agent 実行 → JSON バリデーション
+8. Review Agent 実行 → JSON バリデーション
+9. **公開処理（以下の順で必ず実施し、アトミック性を確保する）**
+   1. Markdown をステージング領域に書き込む
+   2. ステージングファイルを検証する
+   3. `stories_index.json` をアトミック更新（`.tmp` 経由の `replace`）
+   4. Markdown を本番パスへ移動
+   5. `git add / commit / push`
+   6. push 成功確認後に `state.json` を `result: published` に更新
+   7. ログ保存
+   - **注意**: step 5 の push 成功前に `state.json` を更新しない
 
 ### 12.2 再生成フロー
 レビュー不合格時:
@@ -403,6 +473,21 @@ review_score: 86
 - タイトル冒頭語の重複を避ける
 - 同一テーマが短期間に再出現しないよう used_themes.json を参照する
 
+**ローカル事前検査（LLM 判定の前に必ず実施する）**
+
+Jaccard 類似度で直近30作品の要約と比較し、閾値を超えた場合は Story Agent に差し戻す。
+
+```python
+def jaccard(a: str, b: str) -> float:
+    sa, sb = set(a.lower().split()), set(b.lower().split())
+    return len(sa & sb) / max(1, len(sa | sb))
+
+if any(jaccard(new_summary, s) > 0.55 for s in recent_30_summaries):
+    raise ValueError("summary_too_similar")
+```
+
+LLM による類似度・AdSense 適性評価は、このローカル検査を通過した作品にのみ実施する。
+
 ---
 
 ## 14. プロンプト設計方針
@@ -441,6 +526,11 @@ review_score: 86
 - 過去作との差別化評価
 - AdSense 適性上の危険表現有無の点検
 
+**出力制約**:
+- 必ず §11.3 で定義した JSON スキーマのみを出力すること
+- JSON 以外のテキスト（説明文・前置き・Markdown 装飾など）を一切含めないこと
+- プロンプト末尾に明示する: `Output must be valid JSON only. No explanation.`
+
 ---
 
 ## 15. 広告・AdSense 要件
@@ -472,7 +562,7 @@ review_score: 86
 
 ### 16.1 前提
 - GitHub Pages で静的公開する
-- Jekyll または単純な静的HTML構成とする
+- Jekyll を使用する（GitHub Pages 標準、MVP では固定）
 - カスタムドメインがある場合は優先利用可
 
 ### 16.2 必要ファイル
@@ -524,7 +614,20 @@ wsl bash -lc 'cd /path/to/project && python3 scripts/run_daily.py >> logs/cron.l
 - パス依存を避ける
 - OpenClaw から WSL を起動可能であること
 
-### 18.2 推奨
+### 18.2 タイムゾーン
+- 日付管理はすべて JST（Asia/Tokyo）で行う
+- 実装では `ZoneInfo("Asia/Tokyo")` を必ず使用する
+
+```python
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
+```
+
+- `date` フィールドへの UTC や naive datetime の混入を禁止する
+
+### 18.3 推奨
 - 専用ユーザーまたは専用ディレクトリで運用
 - .env にトークン類を集約
 - ローカルテストコマンドを別途用意
@@ -647,6 +750,25 @@ wsl bash -lc 'cd /path/to/project && python3 scripts/run_daily.py >> logs/cron.l
 - 品質安定後に完全自動公開へ移行する
 - 毎日更新サイトは品質の最低線が最重要
 - AIは働き者だが、時々うっとりしながら説明を盛るのでレビュー工程は省略しない
+
+### 25.1 公開モード設定
+運用フェーズに応じて公開モードを切り替えられるよう、設定値で明示する。
+
+設定ファイル（`config.json` 等）に以下を定義する:
+
+```json
+{
+  "publication_mode": "manual_review"
+}
+```
+
+| 値 | 動作 |
+|---|---|
+| `manual_review` | 生成・レビュー後に pending フォルダへ移動し、人間が確認後に手動公開 |
+| `automatic` | レビュー合格後に自動で push・公開 |
+
+- MVP 初期は `manual_review` を推奨とする
+- `automatic` への移行は品質が安定した段階で行う
 
 ---
 
