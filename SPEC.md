@@ -68,9 +68,10 @@ googleアドセンスを各ページに入れておくこと
 - OpenClaw
 - GitHub Pages
 - Markdown ベースのコンテンツ管理
-- Jekyll（GitHub Pages 標準、MVP では固定）
+- Jekyll（GitHub Pages 標準、MVP では固定）+ Chirpy テーマ
 - Google AdSense
 - ads.txt 配置
+- Python venv（WSL2 内仮想環境管理）
 
 ### 3.2 AI利用前提
 - 主要な本文生成は Codex CLI + GPT-5.4 を利用する
@@ -159,11 +160,12 @@ googleアドセンスを各ページに入れておくこと
 project-root/
   SPEC.md
   README.md
+  config.json
   prompts/
     plot_prompt.md
     story_prompt.md
+    title_selection_prompt.md
     review_prompt.md
-    title_prompt.md
   data/
     state.json
     stories_index.json
@@ -180,10 +182,13 @@ project-root/
   scripts/
     run_daily.py
     generate_plot.py
+    select_title.py
     generate_story.py
     review_story.py
     publish_story.py
     rebuild_indexes.py
+  pending/
+    （manual_review モード時の公開前一時置き場）
   site/
     _posts/
     _includes/
@@ -233,6 +238,21 @@ review_score: 86
 - 著作権侵害が疑われる固有表現
 - 過去作の過剰な焼き直し
 - 読者を欺く虚偽の「人間執筆偽装」
+
+### 8.4 banned_terms.json 管理方針
+- **初期リストは手動で作成する**（空スタートは禁止）
+- 初期リストに含める最低限の分類:
+
+| 分類 | 例 |
+|---|---|
+| 差別語 | 各種差別的表現 |
+| 過度な暴力・性的語 | 直接的描写語句 |
+| 実在作家名 | 著名作家の実名 |
+| 特定作品名 | 著作権リスクのある固有タイトル |
+| 危険な誘導表現 | 自傷・犯罪誘導に読み取られる語句 |
+
+- 運用中に問題が発覚した語句は随時追記する（追記方式で育てる）
+- プロンプトと Review Agent の両方から参照する
 
 ---
 
@@ -297,7 +317,7 @@ review_score: 86
 
 ## 10. stories_index.json 仕様
 
-全公開作品一覧を保持する。
+全公開作品一覧を保持する。**日付降順（新しい順）で保持する**。一覧ページはこの順序をそのまま表示に使うため、フロント側でのソート処理は不要とする。
 
 例:
 
@@ -325,11 +345,12 @@ review_score: 86
 - 今日のプロットを作る
 - 過去作と被らないテーマを出す
 - 主人公、舞台、転換点、結末を設計する
+- タイトル候補3件を提示する（選定は §11.5 の Title Selection Agent が行う）
 
 入力:
 - 過去作品インデックス
-- 直近使用テーマ
-- 禁止事項
+- 直近使用テーマ（used_themes.json 直近90日分）
+- 禁止語リスト（banned_terms.json）
 - 本日の生成ルール
 
 出力: **JSON only**（以下スキーマに厳密に従うこと）
@@ -350,9 +371,13 @@ review_score: 86
 
 ### 11.2 Story Agent
 役割:
-- プロットから本文を書く
+- プロットと確定タイトルから本文を書く
 - 指定文字数に収める
 - 文体ガイドを守る
+
+入力:
+- Plot Agent の出力 JSON
+- Title Selection Agent が選んだ確定タイトル1件
 
 出力: **JSON only**（以下スキーマに厳密に従うこと）
 
@@ -406,6 +431,37 @@ review_score: 86
 - Git add / commit / push
 - GitHub Pages へ反映
 
+### 11.5 Title Selection Agent
+役割:
+- Plot Agent が提示したタイトル候補3件を採点し、1件を選ぶ
+- Plot Agent・Story Agent の責務を分離し、タイトル選定の品質を独立して調整できるようにする
+
+入力:
+- `title_candidates`（3件）
+- `plot`（プロット内容）
+- `theme`（テーマ）
+- `reading_impression`（想定読後感）
+
+出力: **JSON only**（以下スキーマに厳密に従うこと）
+
+```json
+{
+  "selected_title": "選定タイトル",
+  "reason": "選定理由（1〜2文）",
+  "scores": {
+    "候補A": 82,
+    "候補B": 75,
+    "候補C": 68
+  }
+}
+```
+
+評価観点:
+- プロット内容との一致度
+- 冒頭の引き（クリック誘引力）
+- 既存タイトルとの重複回避
+- タイトル冒頭語の重複回避（過去30作品と比較）
+
 ---
 
 ## 12. 実行フロー
@@ -417,9 +473,10 @@ review_score: 86
 4. 当日分作品未生成なら処理継続
 5. 過去作一覧読込
 6. Plot Agent 実行 → JSON バリデーション
-7. Story Agent 実行 → JSON バリデーション
-8. Review Agent 実行 → JSON バリデーション
-9. **公開処理（以下の順で必ず実施し、アトミック性を確保する）**
+7. Title Selection Agent 実行 → 確定タイトル決定 → JSON バリデーション
+8. Story Agent 実行（確定タイトルを渡す）→ JSON バリデーション
+9. Review Agent 実行 → JSON バリデーション
+10. **公開処理（以下の順で必ず実施し、アトミック性を確保する）**
    1. Markdown をステージング領域に書き込む
    2. ステージングファイルを検証する
    3. `stories_index.json` をアトミック更新（`.tmp` 経由の `replace`）
@@ -435,7 +492,12 @@ review_score: 86
 1. 改善理由を review.json に保存
 2. Story Agent に改善指示を与えて再生成
 3. 最大3回まで再試行
-4. 3回失敗時は `failed` とする
+4. 3回失敗時は `result: failed` とし、以下の通知を発出する:
+   - ログファイルに詳細を記録する
+   - Windows 通知を発出する（OpenClaw 経由または PowerShell 呼び出し）
+     ```bash
+     powershell.exe -c "New-BurntToastNotification -Text 'DailyStory', '本日分の生成が3回失敗しました'"
+     ```
 5. 公開は行わない
 
 ### 12.3 障害時フロー
@@ -471,7 +533,7 @@ review_score: 86
 - 直近30作品の要約を比較対象に含める
 - 舞台、主人公属性、オチ類型が連続しすぎないよう制約を設ける
 - タイトル冒頭語の重複を避ける
-- 同一テーマが短期間に再出現しないよう used_themes.json を参照する
+- 同一テーマが再出現しないよう used_themes.json を参照する（**保持期間: 直近90日**）
 
 **ローカル事前検査（LLM 判定の前に必ず実施する）**
 
@@ -515,6 +577,20 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 - 冒頭の引き
 - 読後感
 
+### 14.4 Title Selection Prompt
+目的:
+- Plot Agent が提示した3件のタイトル候補から最適な1件を選ぶ
+
+含むべき内容:
+- タイトル候補3件
+- プロット・テーマ・想定読後感
+- 過去30作品のタイトル冒頭語リスト（重複回避用）
+- 評価観点（引き力・プロット整合性・独自性）
+
+**出力制約**:
+- 必ず §11.5 で定義した JSON スキーマのみを出力すること
+- プロンプト末尾に明示する: `Output must be valid JSON only. No explanation.`
+
 ### 14.3 Review Prompt
 目的:
 - 作品検査
@@ -543,16 +619,22 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 - AI生成コンテンツである旨を明記する
 
 ### 15.2 ページ配置方針
-広告配置は以下を推奨とする。
+**MVP では固定枠のみで開始する**（自動広告は使用しない）。
 
-- 記事上部: 1枠
-- 記事本文中または下部: 1枠
-- 一覧ページ下部: 1枠
-- サイドバーがないモバイルファースト構成を優先
+固定枠の配置:
+
+| 枠 | 位置 | 備考 |
+|---|---|---|
+| 記事上部 | 本文直上 | 1枠 |
+| 記事下部 | 本文直下 | 1枠 |
+| 一覧下部 | 一覧ページ末尾 | 1枠 |
+
+- サイドバーなし・モバイルファースト構成を優先する
+- 自動広告は品質安定後に様子を見て追加を検討する
 
 ### 15.3 注意事項
 - 広告過多で本文を圧迫しない
-- 自動広告と固定枠の併用はレイアウト崩れに注意
+- 自動広告と固定枠の併用はレイアウト崩れに注意（MVP 期間中は固定枠のみ）
 - GitHub Pages であっても AdSense 利用自体は可能だが、審査・ポリシー順守を要する
 - コンテンツの薄さは審査・維持の両面で不利
 
@@ -562,8 +644,9 @@ LLM による類似度・AdSense 適性評価は、このローカル検査を�
 
 ### 16.1 前提
 - GitHub Pages で静的公開する
-- Jekyll を使用する（GitHub Pages 標準、MVP では固定）
-- カスタムドメインがある場合は優先利用可
+- Jekyll + Chirpy テーマを使用する（MVP では固定）
+- **当面は GitHub Pages 標準 URL（`garyohosu.github.io/writer` 相当）で運用する**
+- 独自ドメインへの移行は後から可能だが、MVP 期間中は不要とする
 
 ### 16.2 必要ファイル
 - index.html または一覧テンプレート
@@ -627,7 +710,25 @@ run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 
 - `date` フィールドへの UTC や naive datetime の混入を禁止する
 
-### 18.3 推奨
+### 18.3 Python 仮想環境
+- **venv を使用する**（シンプルで標準的、cron 実行時のパス固定が容易）
+
+```bash
+# セットアップ
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+- cron 実行コマンドでは絶対パスで venv の Python を指定する
+
+```bash
+wsl bash -lc 'cd /path/to/project && .venv/bin/python scripts/run_daily.py >> logs/cron.log 2>&1'
+```
+
+- conda・uv は使わない（MVP 期間中のトラブル要因を増やさない）
+
+### 18.4 推奨
 - 専用ユーザーまたは専用ディレクトリで運用
 - .env にトークン類を集約
 - ローカルテストコマンドを別途用意
@@ -660,8 +761,8 @@ run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 
 ### 20.1 失敗分類
 - Codex CLI 実行失敗
-- 出力フォーマット不正
-- レビュー不合格
+- 出力フォーマット不正（JSON バリデーションエラー）
+- レビュー不合格（最大3回）
 - Git push 失敗
 - インデックス更新失敗
 
@@ -670,6 +771,11 @@ run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 - 中間生成物は保存する
 - state.json に失敗箇所を残す
 - 次回再実行時に再開判断可能とする
+
+### 20.3 通知
+- **すべての `result: failed` 遷移時に Windows 通知を発出する**（§12.2 参照）
+- ログのみでは失敗を見落とすリスクがあるため、通知は必須とする
+- メール通知は将来拡張とし、MVP では Windows 通知で対応する
 
 ---
 
@@ -754,7 +860,7 @@ run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 ### 25.1 公開モード設定
 運用フェーズに応じて公開モードを切り替えられるよう、設定値で明示する。
 
-設定ファイル（`config.json` 等）に以下を定義する:
+設定ファイル（`config.json`）に以下を定義する:
 
 ```json
 {
@@ -764,11 +870,12 @@ run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 
 | 値 | 動作 |
 |---|---|
-| `manual_review` | 生成・レビュー後に pending フォルダへ移動し、人間が確認後に手動公開 |
+| `manual_review` | 生成・レビュー後に `pending/` フォルダへ移動し、人間が確認後に手動公開 |
 | `automatic` | レビュー合格後に自動で push・公開 |
 
-- MVP 初期は `manual_review` を推奨とする
-- `automatic` への移行は品質が安定した段階で行う
+- **デフォルト値は `manual_review` に固定する**（設定ファイル未読時のフォールバックも `manual_review`）
+- `automatic` への切替は品質が安定した段階で行う
+- `manual_review` 時の公開手順: `pending/` 内のファイルを確認 → `scripts/publish_story.py` を手動実行
 
 ---
 
