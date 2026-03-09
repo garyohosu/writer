@@ -63,7 +63,7 @@ googleアドセンスを各ページに入れておくこと
 - Windows 11
 - WSL2 (Ubuntu 想定)
 - Git
-- Python 3.11 以上
+- Python 3.8 以上
 - Codex CLI
 - OpenClaw
 - GitHub Pages
@@ -703,10 +703,15 @@ wsl bash -lc 'cd /path/to/project && python3 scripts/run_daily.py >> logs/cron.l
 
 ```python
 from datetime import datetime
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo          # Python 3.9+
+except ImportError:
+    from backports.zoneinfo import ZoneInfo  # Python 3.8: pip install backports.zoneinfo
 
 run_date = datetime.now(ZoneInfo("Asia/Tokyo")).date().isoformat()
 ```
+
+- Python 3.8 環境では `pip install backports.zoneinfo` が必要
 
 - `date` フィールドへの UTC や naive datetime の混入を禁止する
 
