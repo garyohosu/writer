@@ -39,6 +39,30 @@ def _ensure_json_array(path: Path) -> None:
     path.write_text("[]", encoding="utf-8")
 
 
+def _ensure_state_file(state_path: Path, state_example_path: Path, run_date: str) -> None:
+    if state_path.exists():
+        return
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    if state_example_path.exists():
+        state_path.write_text(state_example_path.read_text(encoding="utf-8"), encoding="utf-8")
+        return
+
+    # fallback default
+    state_path.write_text(
+        '{\n'
+        f'  "run_date": "{run_date}",\n'
+        '  "job_id": "",\n'
+        '  "stage": "plot",\n'
+        '  "result": "pending",\n'
+        '  "slug": null,\n'
+        '  "attempts": {},\n'
+        '  "artifacts": {},\n'
+        '  "published_commit": null\n'
+        '}\n',
+        encoding="utf-8",
+    )
+
+
 def build_runtime(
     project_root: str | Path | None = None,
 ) -> tuple[RunDailyPipeline, PublishService]:
@@ -47,7 +71,12 @@ def build_runtime(
 
     config = _load_config(root / "config.json")
     notifier = WindowsNotifier()
-    state_manager = StateManager(str(root / "data" / "state.json"))
+
+    state_path = root / "data" / "state.json"
+    state_example_path = root / "data" / "state.example.json"
+    _ensure_state_file(state_path, state_example_path, run_date)
+
+    state_manager = StateManager(str(state_path))
     log_manager = LogManager(str(root / "logs"), run_date)
     failure_handler = FailureHandler(state_manager, log_manager, notifier)
 

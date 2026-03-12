@@ -2,9 +2,9 @@
   "run_date": "2026-03-13",
   "job_id": "6628b347-2003-4ff3-bf4f-d8359e4e2c14",
   "stage": "publish",
-  "result": "in_progress",
+  "result": "published",
   "slug": "2026-03-13-13d76a19",
   "attempts": {},
   "artifacts": {},
-  "published_commit": "4847eb2d365a8280b4fd4e6e5b764b0248530a43"
+  "published_commit": "bb0215470d3d239ea697f0f804a87a44615e9046"
 }
