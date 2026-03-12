@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "scores": {
+    "originality": 86,
+    "readability": 87,
+    "consistency": 91,
+    "hook": 84,
+    "ending": 83,
+    "overall": 86
+  },
+  "issues": [
+    "題材に『記憶をつなぐ本』『差出人不明の文書』という既視感がわずかにあり、設定の固有性をもう一段強める余地がある",
+    "冒頭末尾の『いた』で文章が途切れており、提示範囲だけではリズムが中断して見える",
+    "要約では展示会と町への波及が主題化されているため、中盤以降で佐和自身の内面的変化が弱いと印象が散る可能性がある"
+  ],
+  "adsense_risk": false,
+  "rewrite_instruction": null
+}
