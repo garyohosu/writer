@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import sys
+import traceback
+
 from writer.bootstrap import build_runtime
 
 
@@ -9,4 +12,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
