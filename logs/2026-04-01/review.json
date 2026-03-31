@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "scores": {
+    "originality": 82,
+    "readability": 88,
+    "consistency": 90,
+    "hook": 84,
+    "ending": 83,
+    "overall": 85
+  },
+  "issues": [
+    "地域の記憶を採集し直して場の役割が再生する構図は、提示された直近作品群と発想の近接がある",
+    "主人公の個人的な切実さは冒頭時点ではやや控えめで、物語の固有の推進力をもう一段強める余地がある",
+    "手描き地図に書かれた『音』の記法や運用ルールがより具体化されると、作品独自の手触りがさらに立つ"
+  ],
+  "adsense_risk": false,
+  "rewrite_instruction": null
+}
