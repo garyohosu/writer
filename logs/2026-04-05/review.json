@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "scores": {
+    "originality": 82,
+    "readability": 86,
+    "consistency": 89,
+    "hook": 84,
+    "ending": 85,
+    "overall": 85
+  },
+  "issues": [
+    "舞台設定と発見の構図に、近接作群と共有する要素がやや見られる",
+    "要約段階では後半の展開幅が静かにまとまりすぎる懸念がある"
+  ],
+  "adsense_risk": false,
+  "rewrite_instruction": null
+}
