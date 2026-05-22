@@ -159,3 +159,4 @@ Traceback (most recent call last):
     raise RuntimeError(f"Max review attempts reached ({max_attempts})")
 RuntimeError: Max review attempts reached (3)
 === CRON_RUN_START 2026-05-22 05:02:48 +0900 ===
+=== CRON_RUN_END exit=0 ===
