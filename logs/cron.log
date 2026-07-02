@@ -298,3 +298,15 @@ Traceback (most recent call last):
   File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 246, in _execute_review_stage
     raise RuntimeError(f"Max review attempts reached ({max_attempts})")
 RuntimeError: Max review attempts reached (3)
+Traceback (most recent call last):
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/scripts/run_daily.py", line 16, in <module>
+    main()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/scripts/run_daily.py", line 11, in main
+    pipeline.run()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 120, in run
+    self._run_stage("review", self._execute_review_stage)
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 88, in _run_stage
+    action()
+  File "/home/garyo/.openclaw/workspace/writer/src/writer/run_daily_pipeline.py", line 246, in _execute_review_stage
+    raise RuntimeError(f"Max review attempts reached ({max_attempts})")
+RuntimeError: Max review attempts reached (3)
