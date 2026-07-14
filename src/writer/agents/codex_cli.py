@@ -27,13 +27,21 @@ class CodexCLI:
         """Execute Codex in non-interactive mode and return last assistant message."""
         with tempfile.TemporaryDirectory(prefix="writer-codex-") as td:
             out_path = Path(td) / "last_message.txt"
-            result = subprocess.run(
-                [self.executable, "exec", "--output-last-message", str(out_path), prompt],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=True,
-            )
+            try:
+                result = subprocess.run(
+                    [self.executable, "exec", "--output-last-message", str(out_path), prompt],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    check=True,
+                )
+            except subprocess.CalledProcessError as error:
+                stderr = (error.stderr or "").strip()
+                stdout = (error.stdout or "").strip()
+                detail = stderr or stdout or "no process output captured"
+                raise RuntimeError(
+                    f"Codex CLI failed with exit code {error.returncode}: {detail}"
+                ) from error
             if out_path.exists():
                 return self._clean_output(out_path.read_text(encoding="utf-8"))
             return self._clean_output(result.stdout)
