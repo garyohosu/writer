@@ -1,6 +1,7 @@
 """Tests for all AI agent classes."""
 from __future__ import annotations
 
+import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,34 +30,52 @@ class TestCodexCLI:
         assert cli.executable == "codex"
 
     def test_run_calls_subprocess(self) -> None:
-        from unittest.mock import patch, MagicMock
         cli = CodexCLI(executable="codex")
-        mock_result = MagicMock()
-        mock_result.stdout = "output text"
+        mock_result = subprocess.CompletedProcess(
+            args=["codex"], returncode=0, stdout="output text", stderr=""
+        )
         with patch("subprocess.run", return_value=mock_result) as mock_run:
             result = cli.run("Hello, world!")
             mock_run.assert_called_once()
             assert result == "output text"
 
-    def test_run_passes_prompt_to_executable(self) -> None:
-        from unittest.mock import patch, MagicMock
+    def test_run_passes_prompt_to_stdin(self) -> None:
         cli = CodexCLI(executable="codex")
-        mock_result = MagicMock()
-        mock_result.stdout = "result"
+        mock_result = subprocess.CompletedProcess(
+            args=["codex"], returncode=0, stdout="result", stderr=""
+        )
         with patch("subprocess.run", return_value=mock_result) as mock_run:
             cli.run("test prompt")
             args = mock_run.call_args[0][0]
             assert "codex" in args
-            assert "test prompt" in args
+            assert args[-1] == "-"
+            assert "test prompt" not in args
+            assert mock_run.call_args.kwargs["input"] == "test prompt"
 
     def test_run_returns_string(self) -> None:
-        from unittest.mock import patch, MagicMock
         cli = CodexCLI(executable="codex")
-        mock_result = MagicMock()
-        mock_result.stdout = "テスト出力"
+        mock_result = subprocess.CompletedProcess(
+            args=["codex"], returncode=0, stdout="テスト出力", stderr=""
+        )
         with patch("subprocess.run", return_value=mock_result):
             result = cli.run("テストプロンプト")
             assert isinstance(result, str)
+
+    def test_run_retries_failed_empty_output(self) -> None:
+        cli = CodexCLI(executable="codex", max_attempts=2)
+        failed = subprocess.CompletedProcess(
+            args=["codex"], returncode=1, stdout="", stderr="temporary failure"
+        )
+        succeeded = subprocess.CompletedProcess(
+            args=["codex"], returncode=0, stdout="result", stderr=""
+        )
+        with patch("subprocess.run", side_effect=[failed, succeeded]) as mock_run:
+            with patch("time.sleep") as mock_sleep:
+                result = cli.run("test prompt")
+
+        assert result == "result"
+        assert mock_run.call_count == 2
+        mock_sleep.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
